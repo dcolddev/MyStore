@@ -28,10 +28,18 @@ const Auth = () => {
       setLoading(true);
       const { error } = await signInWithGoogle();
       if (error) {
-        toast.error(error.message || 'Google Auth failed. Check Google Cloud Console setup.');
+        if (error.message?.includes('provider is not enabled') || error.message?.includes('validation_failed')) {
+          toast.error('Google Auth is disabled in Supabase. Go to Supabase Dashboard > Auth > Providers > Google and toggle ON.');
+        } else {
+          toast.error(error.message || 'Google Auth failed. Please check Google Cloud Console setup.');
+        }
       }
     } catch (err: any) {
-      toast.error(err.message || 'An error occurred during Google sign-in');
+      if (err?.message?.includes('provider is not enabled')) {
+        toast.error('Enable Google provider in Supabase Dashboard > Authentication > Providers > Google.');
+      } else {
+        toast.error(err.message || 'An error occurred during Google sign-in');
+      }
     } finally {
       setLoading(false);
     }
