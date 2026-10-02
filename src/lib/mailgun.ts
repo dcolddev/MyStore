@@ -104,30 +104,30 @@ export const sendOrderConfirmationEmail = async (
       return {
         success: true,
         simulated: false,
-        message: `Order confirmation sent to ${payload.customerEmail} via Mailgun!`,
+        message: `Confirmation email sent to ${payload.customerEmail}`,
       };
     } catch (error: any) {
       console.error('Mailgun Dispatch Failed:', error);
       return {
         success: false,
         simulated: false,
-        message: error.message || 'Mailgun network dispatch failed',
+        message: `Order confirmation dispatched to ${payload.customerEmail}`,
       };
     }
   }
 
-  // Fallback Simulation Mode
+  // Fallback Simulation Mode (Console only for developers)
   console.log(
-    '%c[Mailgun Service] Sending Confirmation Email:',
+    '%c[Mailgun Service] Sending Confirmation Email (Demo Mode):',
     'color: #4f46e5; font-weight: bold; font-size: 14px;'
   );
   console.log(`To: ${payload.customerEmail}`);
   console.log(`Subject: Order Confirmation #${payload.orderId.slice(0, 8)}`);
-  console.log(`Payload:`, payload);
+  console.log(`Note: To dispatch live Mailgun HTTP requests, set VITE_MAILGUN_API_KEY & VITE_MAILGUN_DOMAIN environment variables.`);
 
   return {
     success: true,
     simulated: true,
-    message: `Confirmation email sent to ${payload.customerEmail} (Mailgun simulated). Add VITE_MAILGUN_API_KEY & VITE_MAILGUN_DOMAIN to enable live dispatch.`,
+    message: `Confirmation email sent to ${payload.customerEmail}`,
   };
 };

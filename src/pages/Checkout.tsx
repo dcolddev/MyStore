@@ -91,18 +91,32 @@ export default function Checkout() {
 
           await supabase.from('order_items').insert(orderItems);
 
-          // Decrement stock
+          // Decrement stock & record sales for dashboard analytics
           for (const item of cart) {
             if (item.id.length === 36) {
               const { data: existingProd } = await supabase
                 .from('products')
-                .select('quantity')
+                .select('quantity, cost_price')
                 .eq('id', item.id)
                 .single();
 
               if (existingProd) {
                 const newQty = Math.max(0, existingProd.quantity - item.quantity);
                 await supabase.from('products').update({ quantity: newQty }).eq('id', item.id);
+
+                const unitCost = Number(existingProd.cost_price) || item.selling_price * 0.7;
+                const totalRev = item.selling_price * item.quantity;
+                const totalCost = unitCost * item.quantity;
+
+                await supabase.from('sales').insert({
+                  store_id: firstStoreId,
+                  product_id: item.id,
+                  quantity: item.quantity,
+                  total_revenue: totalRev,
+                  total_cost: totalCost,
+                  profit: totalRev - totalCost,
+                  sale_date: new Date().toISOString(),
+                });
               }
             }
           }
