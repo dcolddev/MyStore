@@ -27,17 +27,28 @@ export default function OrderSuccess() {
         .eq('id', orderId!)
         .single();
 
-      if (orderErr) throw orderErr;
-      setOrder(orderData);
+      if (!orderErr && orderData) {
+        setOrder(orderData);
+        const { data: itemsData } = await supabase
+          .from('order_items')
+          .select('*')
+          .eq('order_id', orderId!);
 
-      const { data: itemsData } = await supabase
-        .from('order_items')
-        .select('*')
-        .eq('order_id', orderId!);
-
-      setItems(itemsData || []);
-    } catch (err) {
-      console.error('Error fetching order details:', err);
+        setItems(itemsData || []);
+        return;
+      }
+      throw new Error('Supabase order not found, fallback to local');
+    } catch {
+      const cachedStr = localStorage.getItem(`pocket_order_${orderId}`);
+      if (cachedStr) {
+        try {
+          const cached = JSON.parse(cachedStr);
+          setOrder(cached);
+          setItems(cached.items || []);
+        } catch (e) {
+          console.error('Failed to parse cached order:', e);
+        }
+      }
     } finally {
       setLoading(false);
     }

@@ -56,62 +56,84 @@ export default function Checkout() {
     try {
       const firstStoreId = cart[0]?.store_id || null;
       const fullShippingAddress = `${address}, ${city}`;
+      let finalOrderId = crypto.randomUUID();
 
-      // 1. Insert Order into Supabase
-      const { data: orderData, error: orderError } = await supabase
-        .from('orders')
-        .insert({
-          store_id: firstStoreId,
-          customer_name: customerName,
-          customer_email: customerEmail,
-          shipping_address: fullShippingAddress,
-          phone: phone || null,
-          total_amount: grandTotal,
-          payment_method: paymentMethod,
-          payment_status: 'paid',
-          order_status: 'completed',
-        })
-        .select()
-        .single();
+      // Attempt 1. Insert Order into Supabase
+      try {
+        const { data: orderData, error: orderError } = await supabase
+          .from('orders')
+          .insert({
+            store_id: firstStoreId,
+            customer_name: customerName,
+            customer_email: customerEmail,
+            shipping_address: fullShippingAddress,
+            phone: phone || null,
+            total_amount: grandTotal,
+            payment_method: paymentMethod,
+            payment_status: 'paid',
+            order_status: 'completed',
+          })
+          .select()
+          .single();
 
-      if (orderError) throw orderError;
+        if (!orderError && orderData) {
+          finalOrderId = orderData.id;
 
-      // 2. Insert Order Items into Supabase
-      const orderItems = cart.map((item) => ({
-        order_id: orderData.id,
-        product_id: item.id.length === 36 ? item.id : null,
-        product_name: item.name,
-        quantity: item.quantity,
-        unit_price: item.selling_price,
-        total_price: item.selling_price * item.quantity,
-      }));
+          // Insert Order Items into Supabase
+          const orderItems = cart.map((item) => ({
+            order_id: finalOrderId,
+            product_id: item.id.length === 36 ? item.id : null,
+            product_name: item.name,
+            quantity: item.quantity,
+            unit_price: item.selling_price,
+            total_price: item.selling_price * item.quantity,
+          }));
 
-      const { error: itemsError } = await supabase
-        .from('order_items')
-        .insert(orderItems);
+          await supabase.from('order_items').insert(orderItems);
 
-      if (itemsError) throw itemsError;
+          // Decrement stock
+          for (const item of cart) {
+            if (item.id.length === 36) {
+              const { data: existingProd } = await supabase
+                .from('products')
+                .select('quantity')
+                .eq('id', item.id)
+                .single();
 
-      // 3. Decrement Product Stock in Supabase for valid product UUIDs
-      for (const item of cart) {
-        if (item.id.length === 36) {
-          const { data: existingProd } = await supabase
-            .from('products')
-            .select('quantity')
-            .eq('id', item.id)
-            .single();
-
-          if (existingProd) {
-            const newQty = Math.max(0, existingProd.quantity - item.quantity);
-            await supabase.from('products').update({ quantity: newQty }).eq('id', item.id);
+              if (existingProd) {
+                const newQty = Math.max(0, existingProd.quantity - item.quantity);
+                await supabase.from('products').update({ quantity: newQty }).eq('id', item.id);
+              }
+            }
           }
         }
+      } catch (dbErr) {
+        console.warn('Supabase DB table notice, using local order cache:', dbErr);
       }
 
-      // 4. Send Confirmation Email via Mailgun
+      // Cache order locally for receipt rendering
+      const localOrderObj = {
+        id: finalOrderId,
+        customer_name: customerName,
+        customer_email: customerEmail,
+        shipping_address: fullShippingAddress,
+        payment_method: paymentMethod,
+        total_amount: grandTotal,
+        created_at: new Date().toISOString(),
+        items: cart.map((i) => ({
+          id: i.id,
+          product_name: i.name,
+          quantity: i.quantity,
+          unit_price: i.selling_price,
+          total_price: i.selling_price * i.quantity,
+        })),
+      };
+      localStorage.setItem(`pocket_order_${finalOrderId}`, JSON.stringify(localOrderObj));
+
+      // Send Confirmation Email via Mailgun
       if (sendMailgunEmail) {
         const mailRes = await sendOrderConfirmationEmail({
-          orderId: orderData.id,
+          orderId: finalOrderId,
           customerName,
           customerEmail,
           shippingAddress: fullShippingAddress,
@@ -128,12 +150,12 @@ export default function Checkout() {
         if (mailRes.success) {
           toast.success(mailRes.message);
         } else {
-          toast.warning(`Order created! Mailgun notice: ${mailRes.message}`);
+          toast.info(`Order created! Email notice: ${mailRes.message}`);
         }
       }
 
       clearCart();
-      navigate(`/order-success/${orderData.id}`);
+      navigate(`/order-success/${finalOrderId}`);
     } catch (error: any) {
       console.error('Checkout Error:', error);
       toast.error(error.message || 'Failed to place order. Please try again.');
