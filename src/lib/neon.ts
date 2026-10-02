@@ -1,6 +1,6 @@
 import { neon } from '@neondatabase/serverless';
 
-const DATABASE_URL = import.meta.env.VITE_NEON_DATABASE_URL || '';
+const DATABASE_URL = import.meta.env.VITE_NEON_DATABASE_URL || import.meta.env.DATABASE_URL || import.meta.env.DATABASE_POSTGRES_URL || '';
 
 export const getNeonSql = () => {
   if (!DATABASE_URL) return null;

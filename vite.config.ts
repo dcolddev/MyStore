@@ -5,6 +5,7 @@ import { componentTagger } from "lovable-tagger";
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
+  envPrefix: ['VITE_', 'DATABASE_', 'MAILGUN_', 'GOOGLE_'],
   server: {
     host: "::",
     port: 8080,

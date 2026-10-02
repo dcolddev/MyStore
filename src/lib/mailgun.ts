@@ -18,9 +18,9 @@ export interface OrderEmailPayload {
 export const sendOrderConfirmationEmail = async (
   payload: OrderEmailPayload
 ): Promise<{ success: boolean; simulated: boolean; message: string }> => {
-  const apiKey = import.meta.env.VITE_MAILGUN_API_KEY;
-  const domain = import.meta.env.VITE_MAILGUN_DOMAIN;
-  const sender = import.meta.env.VITE_MAILGUN_SENDER_EMAIL || `Pocket Shop <orders@${domain || 'mg.pocketshop.com'}>`;
+  const apiKey = import.meta.env.VITE_MAILGUN_API_KEY || import.meta.env.MAILGUN_API_KEY;
+  const domain = import.meta.env.VITE_MAILGUN_DOMAIN || import.meta.env.MAILGUN_DOMAIN;
+  const sender = import.meta.env.VITE_MAILGUN_SENDER_EMAIL || import.meta.env.MAILGUN_SENDER_EMAIL || `Pocket Shop <orders@${domain || 'mg.pocketshop.com'}>`;
 
   const itemsHtml = payload.items
     .map(
