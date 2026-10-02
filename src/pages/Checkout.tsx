@@ -12,6 +12,8 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { ArrowLeft, CreditCard, ShoppingBag, Truck, CheckCircle, Mail, ShieldCheck } from 'lucide-react';
 import { toast } from 'sonner';
 
+import { saveNeonOrder } from '@/lib/neon';
+
 export default function Checkout() {
   const navigate = useNavigate();
   const { cart, totalAmount, clearCart } = useCart();
@@ -58,7 +60,30 @@ export default function Checkout() {
       const fullShippingAddress = `${address}, ${city}`;
       let finalOrderId = crypto.randomUUID();
 
-      // Attempt 1. Insert Order into Supabase
+      // 1. Persist Order in Neon Postgres (Serverless DB)
+      try {
+        await saveNeonOrder({
+          id: finalOrderId,
+          store_id: firstStoreId,
+          customer_name: customerName,
+          customer_email: customerEmail,
+          shipping_address: fullShippingAddress,
+          phone: phone || null,
+          total_amount: grandTotal,
+          payment_method: paymentMethod,
+          items: cart.map((i) => ({
+            id: i.id,
+            product_name: i.name,
+            quantity: i.quantity,
+            unit_price: i.selling_price,
+            total_price: i.selling_price * i.quantity,
+          })),
+        });
+      } catch (neonErr) {
+        console.warn('Neon database insert notice:', neonErr);
+      }
+
+      // 2. Insert Order into Supabase Database
       try {
         const { data: orderData, error: orderError } = await supabase
           .from('orders')
@@ -79,7 +104,6 @@ export default function Checkout() {
         if (!orderError && orderData) {
           finalOrderId = orderData.id;
 
-          // Insert Order Items into Supabase
           const orderItems = cart.map((item) => ({
             order_id: finalOrderId,
             product_id: item.id.length === 36 ? item.id : null,
@@ -91,7 +115,6 @@ export default function Checkout() {
 
           await supabase.from('order_items').insert(orderItems);
 
-          // Decrement stock & record sales for dashboard analytics
           for (const item of cart) {
             if (item.id.length === 36) {
               const { data: existingProd } = await supabase
@@ -122,7 +145,7 @@ export default function Checkout() {
           }
         }
       } catch (dbErr) {
-        console.warn('Supabase DB table notice, using local order cache:', dbErr);
+        console.warn('Supabase DB notice:', dbErr);
       }
 
       // Cache order locally for receipt rendering
