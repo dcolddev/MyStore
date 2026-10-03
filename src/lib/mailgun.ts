@@ -106,24 +106,65 @@ export const sendOrderConfirmationEmail = async (
         simulated: false,
         message: `Confirmation email sent to ${payload.customerEmail}`,
       };
+      }
     } catch (error: any) {
       console.error('Mailgun Dispatch Failed:', error);
-      return {
-        success: false,
-        simulated: false,
-        message: `Order confirmation dispatched to ${payload.customerEmail}`,
+      // Fall through to EmailJS fallback
+    }
+  }
+
+  // --- EmailJS Fallback ---
+  const emailJsServiceId = import.meta.env.VITE_EMAILJS_SERVICE_ID;
+  const emailJsTemplateId = import.meta.env.VITE_EMAILJS_TEMPLATE_ID;
+  const emailJsPublicKey = import.meta.env.VITE_EMAILJS_PUBLIC_KEY;
+
+  if (emailJsServiceId && emailJsTemplateId && emailJsPublicKey) {
+    console.log('[Email Service] Attempting fallback via EmailJS');
+    try {
+      const emailJsData = {
+        service_id: emailJsServiceId,
+        template_id: emailJsTemplateId,
+        user_id: emailJsPublicKey,
+        template_params: {
+          to_email: payload.customerEmail,
+          to_name: payload.customerName,
+          order_id: payload.orderId.slice(0, 8),
+          total_amount: payload.totalAmount.toFixed(2),
+          shipping_address: payload.shippingAddress,
+          payment_method: payload.paymentMethod.toUpperCase(),
+          html_message: emailHtml,
+        },
       };
+
+      const emailJsResponse = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(emailJsData),
+      });
+
+      if (emailJsResponse.ok) {
+        return {
+          success: true,
+          simulated: false,
+          message: `Confirmation email sent to ${payload.customerEmail} (via EmailJS)`,
+        };
+      } else {
+        const errText = await emailJsResponse.text();
+        console.error('EmailJS API Error:', errText);
+      }
+    } catch (error: any) {
+      console.error('EmailJS Dispatch Failed:', error);
     }
   }
 
   // Fallback Simulation Mode (Console only for developers)
   console.log(
-    '%c[Mailgun Service] Sending Confirmation Email (Demo Mode):',
+    '%c[Email Service] Sending Confirmation Email (Demo Mode):',
     'color: #4f46e5; font-weight: bold; font-size: 14px;'
   );
   console.log(`To: ${payload.customerEmail}`);
   console.log(`Subject: Order Confirmation #${payload.orderId.slice(0, 8)}`);
-  console.log(`Note: To dispatch live Mailgun HTTP requests, set VITE_MAILGUN_API_KEY & VITE_MAILGUN_DOMAIN environment variables.`);
+  console.log(`Note: To dispatch live emails, configure Mailgun or EmailJS environment variables.`);
 
   return {
     success: true,
