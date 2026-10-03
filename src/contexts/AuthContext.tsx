@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import { signUpNeon, signInNeon, signOutNeon, getCurrentUserNeon } from '@/lib/neon';
 import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
 
 export interface User {
   id: string;
@@ -125,6 +126,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const signOut = async () => {
     await signOutNeon();
     setUser(null);
+    toast.success('Logged out successfully!');
     navigate('/auth');
   };
 

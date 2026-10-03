@@ -243,10 +243,17 @@ const Dashboard = () => {
               <Plus className="mr-2 h-4 w-4" />
               New Store
             </Button>
+
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={signOut}
+              className="text-destructive hover:bg-destructive/10 border-destructive/20 gap-1.5 font-medium"
+            >
+              <LogOut className="h-4 w-4" />
+              <span>Logout</span>
+            </Button>
           </div>
-          <Button variant="ghost" size="icon" onClick={signOut}>
-            <LogOut className="h-5 w-5" />
-          </Button>
         </div>
       </header>
 

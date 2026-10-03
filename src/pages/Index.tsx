@@ -18,7 +18,8 @@ import {
   Star, 
   ArrowRight,
   UserCheck,
-  Package
+  Package,
+  LogOut
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -65,7 +66,7 @@ const DEMO_PRODUCTS: ProductItem[] = [
 
 export default function Index() {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
   const { addToCart, itemCount, setIsCartOpen } = useCart();
   const [products, setProducts] = useState<ProductItem[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -180,6 +181,18 @@ export default function Index() {
                 </>
               )}
             </Button>
+
+            {user && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={signOut}
+                className="text-destructive hover:bg-destructive/10 border-destructive/20 gap-1.5 font-medium"
+              >
+                <LogOut className="h-4 w-4" />
+                <span className="hidden sm:inline">Logout</span>
+              </Button>
+            )}
 
             <Button
               onClick={() => setIsCartOpen(true)}
