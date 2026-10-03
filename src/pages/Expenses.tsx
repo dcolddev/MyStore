@@ -35,12 +35,12 @@ export default function Expenses() {
       <div className="max-w-2xl mx-auto space-y-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" onClick={() => navigate(`/stores/${storeId}`)}>
+            <Button variant="ghost" size="icon" onClick={() => navigate('/dashboard')}>
               <ArrowLeft className="h-5 w-5" />
             </Button>
             <h1 className="text-2xl font-bold text-foreground">Expenses</h1>
           </div>
-          <Button onClick={() => navigate(`/stores/${storeId}/expenses/new`)}>
+          <Button onClick={() => navigate('/expenses/new')}>
             <Plus className="h-4 w-4 mr-2" />
             Add
           </Button>

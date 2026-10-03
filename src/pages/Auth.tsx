@@ -31,10 +31,6 @@ const Auth = () => {
 
   const handleGoogleSignIn = async () => {
     try {
-      if (role === 'cashier' && !branchCode.trim()) {
-        toast.error('Please enter your Branch Access Code before continuing with Google.');
-        return;
-      }
       setLoading(true);
       const targetRole = role;
       const { user, error } = await signInWithGoogle(targetRole, branchCode);
@@ -75,13 +71,7 @@ const Auth = () => {
           return;
         }
 
-        if (role === 'cashier' && !branchCode.trim()) {
-          toast.error('Please enter your Branch Access Code');
-          setLoading(false);
-          return;
-        }
-
-        const signUpRole = role === 'cashier' ? 'cashier' : 'business_owner';
+        const signUpRole = role === 'business_owner' ? 'business_owner' : 'customer';
         const { user: newCreatedUser, error } = await signUp(email, password, fullName, signUpRole, branchCode);
         if (error) {
           toast.error(error.message);
@@ -121,7 +111,7 @@ const Auth = () => {
           {/* Role Selector */}
           <div className="space-y-2">
             <Label className="text-[11px] font-extrabold text-muted-foreground uppercase tracking-wider">Account Type</Label>
-            <div className="grid grid-cols-3 gap-1.5">
+            <div className="grid grid-cols-2 gap-1.5">
               <button
                 type="button"
                 onClick={() => setRole('customer')}
@@ -144,40 +134,12 @@ const Auth = () => {
                 }`}
               >
                 <Building2 className="h-4 w-4" />
-                <span>Store Owner</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setRole('cashier')}
-                className={`p-2.5 rounded-xl border flex flex-col items-center gap-1 text-[11px] font-bold transition-all ${
-                  role === 'cashier'
-                    ? 'border-primary bg-primary/10 text-primary shadow-sm'
-                    : 'border-border text-muted-foreground hover:bg-muted/50'
-                }`}
-              >
-                <UserCheck className="h-4 w-4" />
-                <span>Cashier</span>
+                <span>Store Admin</span>
               </button>
             </div>
           </div>
 
-          {/* Branch Access Code Input when Cashier is selected */}
-          {role === 'cashier' && (
-            <div className="space-y-2 p-3 bg-muted/40 rounded-xl border border-primary/20">
-              <Label htmlFor="branchCode" className="flex items-center gap-1.5 text-xs font-bold text-primary">
-                <KeyRound className="h-3.5 w-3.5" />
-                Branch Access Code (Provided by Owner)
-              </Label>
-              <Input
-                id="branchCode"
-                type="text"
-                placeholder="e.g. BR-8X92K"
-                value={branchCode}
-                onChange={(e) => setBranchCode(e.target.value.toUpperCase())}
-                className="font-mono uppercase font-bold tracking-wider"
-              />
-            </div>
-          )}
+
 
           <Button
             type="button"
@@ -276,9 +238,7 @@ const Auth = () => {
                 ? 'Sign In'
                 : role === 'customer'
                 ? 'Create Customer Account'
-                : role === 'cashier'
-                ? 'Join Branch as Cashier'
-                : 'Create Owner Account'}
+                : 'Create Admin Account'}
             </Button>
           </form>
 

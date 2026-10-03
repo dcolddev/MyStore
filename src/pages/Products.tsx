@@ -39,19 +39,7 @@ const Products = () => {
       const sql = getNeonSql();
       if (navigator.onLine && sql) {
         try {
-          if (user.role === 'cashier') {
-            if (user.store_id) {
-              storeList = await sql`SELECT * FROM stores WHERE id = ${user.store_id}`;
-            } else {
-              storeList = await sql`
-                SELECT s.* FROM stores s
-                INNER JOIN store_cashiers sc ON sc.store_id = s.id
-                WHERE sc.cashier_id = ${user.id}
-              `;
-            }
-          } else {
-            storeList = await sql`SELECT * FROM stores WHERE owner_id = ${user.id} ORDER BY created_at DESC`;
-          }
+          storeList = await sql`SELECT * FROM stores WHERE owner_id = ${user.id} ORDER BY created_at DESC LIMIT 1`;
         } catch (err) {
           console.warn('Neon stores query error:', err);
         }
@@ -133,8 +121,8 @@ const Products = () => {
       <div className="flex min-h-screen items-center justify-center p-4">
         <Card className="max-w-md text-center p-6 space-y-4">
           <Package className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
-          <p className="text-muted-foreground">Create a store first to manage products</p>
-          <Button onClick={() => navigate('/stores/new')}>Create Store</Button>
+          <p className="text-muted-foreground">Please initialize your store profile from the dashboard first</p>
+          <Button onClick={() => navigate('/dashboard')}>Go to Dashboard</Button>
         </Card>
       </div>
     );
@@ -145,12 +133,12 @@ const Products = () => {
       <header className="border-b bg-card">
         <div className="container mx-auto flex items-center justify-between p-4">
           <div className="flex items-center gap-2">
-            <Button variant="ghost" size="icon" onClick={() => navigate(activeStoreId ? `/stores/${activeStoreId}` : '/dashboard')}>
+            <Button variant="ghost" size="icon" onClick={() => navigate('/dashboard')}>
               <ArrowLeft className="h-5 w-5" />
             </Button>
             <h1 className="text-lg font-bold">Products</h1>
           </div>
-          <Button onClick={() => navigate(activeStoreId ? `/stores/${activeStoreId}/products/new` : '/products/new')} size="sm">
+          <Button onClick={() => navigate('/products/new')} size="sm">
             <Plus className="mr-1 h-4 w-4" />
             Add Product
           </Button>
@@ -162,7 +150,7 @@ const Products = () => {
           <Card className="text-center p-8 space-y-4">
             <Package className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
             <p className="text-muted-foreground">No products in this store catalog yet</p>
-            <Button onClick={() => navigate(activeStoreId ? `/stores/${activeStoreId}/products/new` : '/products/new')}>
+            <Button onClick={() => navigate('/products/new')}>
               <Plus className="mr-2 h-4 w-4" />
               Add First Product
             </Button>
@@ -193,7 +181,7 @@ const Products = () => {
                       <Button
                         size="sm"
                         variant="outline"
-                        onClick={() => navigate(`/stores/${activeStoreId}/products/${product.id}/restock`)}
+                        onClick={() => navigate(`/products/${product.id}/restock`)}
                         className="gap-1"
                       >
                         <PackagePlus className="h-4 w-4" />

@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -9,10 +9,12 @@ import { ArrowLeft, Package } from 'lucide-react';
 import { getNeonSql } from '@/lib/neon';
 import { db } from '@/lib/db';
 import { toast } from 'sonner';
+import { useAuth } from '@/contexts/AuthContext';
 
 const ProductNew = () => {
   const navigate = useNavigate();
-  const { storeId } = useParams();
+  const { user } = useAuth();
+  const [storeId, setStoreId] = useState<string>('');
   const [name, setName] = useState('');
   const [costPrice, setCostPrice] = useState('');
   const [sellingPrice, setSellingPrice] = useState('');
@@ -43,6 +45,26 @@ const ProductNew = () => {
     }
     return price; // Already per derica
   };
+
+  useEffect(() => {
+    const fetchStore = async () => {
+      if (!user) return;
+      try {
+        const sql = getNeonSql();
+        if (navigator.onLine && sql) {
+          const res = await sql`SELECT id FROM stores WHERE owner_id = ${user.id} LIMIT 1`;
+          if (res.length > 0) setStoreId(res[0].id);
+        } else {
+          const stores = await db.stores.toArray();
+          if (stores.length > 0) setStoreId(stores[0].id);
+        }
+      } catch (e) {
+        const stores = await db.stores.toArray();
+        if (stores.length > 0) setStoreId(stores[0].id);
+      }
+    };
+    fetchStore();
+  }, [user]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -89,7 +111,7 @@ const ProductNew = () => {
       });
 
       toast.success('Product added successfully!');
-      navigate(`/stores/${storeId}/products`);
+      navigate('/products');
     } catch (error: any) {
       await db.products.add({
         ...fullProductData,
@@ -104,7 +126,7 @@ const ProductNew = () => {
       });
 
       toast.success('Product added (will sync when online)');
-      navigate(`/stores/${storeId}/products`);
+      navigate('/products');
     } finally {
       setLoading(false);
     }
@@ -115,7 +137,7 @@ const ProductNew = () => {
       <div className="container mx-auto max-w-md">
         <Button
           variant="ghost"
-          onClick={() => navigate(`/stores/${storeId}/products`)}
+          onClick={() => navigate('/products')}
           className="mb-4"
         >
           <ArrowLeft className="mr-2 h-4 w-4" />

@@ -47,20 +47,14 @@ const App = () => (
               <Route path="/forgot-password" element={<ForgotPassword />} />
               <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/dashboard" element={<Dashboard />} />
-              <Route path="/pos" element={<Checkout />} />
-              <Route path="/stores/new" element={<StoreNew />} />
               <Route path="/products" element={<Products />} />
               <Route path="/products/new" element={<ProductNew />} />
-              <Route path="/stores/:storeId" element={<Dashboard />} />
-              <Route path="/stores/:storeId/products" element={<Products />} />
-              <Route path="/stores/:storeId/products/new" element={<ProductNew />} />
-              <Route path="/stores/:storeId/products/:productId/restock" element={<ProductRestock />} />
-              <Route path="/stores/:storeId/sales/new" element={<Checkout />} />
-              <Route path="/stores/:storeId/sales/history" element={<SalesHistory />} />
-              <Route path="/stores/:storeId/expenses" element={<Expenses />} />
-              <Route path="/stores/:storeId/expenses/new" element={<ExpenseNew />} />
-              <Route path="/stores/:storeId/debts" element={<Debts />} />
-              <Route path="/stores/:storeId/debts/new" element={<DebtNew />} />
+              <Route path="/products/:productId/restock" element={<ProductRestock />} />
+              <Route path="/sales/history" element={<SalesHistory />} />
+              <Route path="/expenses" element={<Expenses />} />
+              <Route path="/expenses/new" element={<ExpenseNew />} />
+              <Route path="/debts" element={<Debts />} />
+              <Route path="/debts/new" element={<DebtNew />} />
               
               {/* Catch-all */}
               <Route path="*" element={<NotFound />} />

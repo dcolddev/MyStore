@@ -13,7 +13,7 @@ import { toast } from 'sonner';
 
 const ProductRestock = () => {
   const navigate = useNavigate();
-  const { storeId, productId } = useParams();
+  const { productId } = useParams();
   const [product, setProduct] = useState<LocalProduct | null>(null);
   const [quantity, setQuantity] = useState('');
   const [unit, setUnit] = useState<'bag' | 'paint' | 'derica' | 'kg'>('derica');
@@ -73,7 +73,7 @@ const ProductRestock = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!product || !storeId) return;
+    if (!product) return;
 
     setLoading(true);
 
@@ -87,7 +87,7 @@ const ProductRestock = () => {
       const expenseId = crypto.randomUUID();
       const expenseData = {
         id: expenseId,
-        store_id: storeId,
+        store_id: product.store_id,
         amount: expenseAmount,
         category: 'Restock',
         description: `Restocked ${quantity} ${unit} of ${product.name}`,
@@ -104,7 +104,7 @@ const ProductRestock = () => {
 
         await sql`
           INSERT INTO expenses (id, store_id, amount, category, description)
-          VALUES (${expenseId}, ${storeId}, ${expenseAmount}, 'Restock', ${`Restocked ${quantity} ${unit} of ${product.name}`})
+          VALUES (${expenseId}, ${product.store_id}, ${expenseAmount}, 'Restock', ${`Restocked ${quantity} ${unit} of ${product.name}`})
         `;
       }
 
@@ -122,7 +122,7 @@ const ProductRestock = () => {
       });
 
       toast.success('Product restocked successfully!');
-      navigate(`/stores/${storeId}/products`);
+      navigate('/products');
     } catch (error: any) {
       // Offline mode
       await db.products.update(product.id, {
@@ -135,7 +135,7 @@ const ProductRestock = () => {
       const expenseId = crypto.randomUUID();
       const expenseData = {
         id: expenseId,
-        store_id: storeId,
+        store_id: product.store_id,
         amount: expenseAmount,
         category: 'Restock',
         description: `Restocked ${quantity} ${unit} of ${product.name}`,
@@ -172,7 +172,7 @@ const ProductRestock = () => {
       }
 
       toast.success('Product restocked (will sync when online)');
-      navigate(`/stores/${storeId}/products`);
+      navigate('/products');
     } finally {
       setLoading(false);
     }
@@ -187,7 +187,7 @@ const ProductRestock = () => {
       <div className="container mx-auto max-w-md">
         <Button
           variant="ghost"
-          onClick={() => navigate(`/stores/${storeId}/products`)}
+          onClick={() => navigate('/products')}
           className="mb-4"
         >
           <ArrowLeft className="mr-2 h-4 w-4" />

@@ -62,7 +62,7 @@ export default function ExpenseNew() {
       }
 
       toast({ title: 'Expense added successfully' });
-      navigate(`/stores/${storeId}/expenses`);
+      navigate('/expenses');
     } catch (error) {
       console.error('Error adding expense:', error);
       toast({ title: 'Failed to add expense', variant: 'destructive' });
@@ -75,7 +75,7 @@ export default function ExpenseNew() {
     <div className="min-h-screen bg-background p-4">
       <div className="max-w-2xl mx-auto space-y-6">
         <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate(`/stores/${storeId}/expenses`)}>
+          <Button variant="ghost" size="icon" onClick={() => navigate('/expenses')}>
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <h1 className="text-2xl font-bold text-foreground">Add Expense</h1>
