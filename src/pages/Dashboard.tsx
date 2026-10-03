@@ -86,7 +86,7 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
 
   // Pending Role Selection Modal (Google Auth)
-  const [pendingRole, setPendingRole] = useState<'business_owner' | 'cashier'>('business_owner');
+  const [pendingRole, setPendingRole] = useState<'customer' | 'business_owner' | 'cashier'>('business_owner');
   const [pendingBranchCode, setPendingBranchCode] = useState('');
   const [updatingRole, setUpdatingRole] = useState(false);
 
@@ -115,8 +115,13 @@ const Dashboard = () => {
     setUpdatingRole(false);
 
     if (res.success) {
-      toast.success(pendingRole === 'cashier' ? 'Connected to store branch as Cashier!' : 'Account setup complete as Business Owner!');
-      loadStores();
+      if (pendingRole === 'customer') {
+        toast.success('Account setup complete as Customer!');
+        navigate('/');
+      } else {
+        toast.success(pendingRole === 'cashier' ? 'Connected to store branch as Cashier!' : 'Account setup complete as Business Owner!');
+        loadStores();
+      }
     } else {
       toast.error(res.error || 'Failed to complete role setup');
     }
@@ -995,7 +1000,19 @@ const Dashboard = () => {
           <form onSubmit={handlePendingRoleSubmit} className="space-y-4 py-2">
             <div className="space-y-2">
               <Label>Select Account Type</Label>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-3 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setPendingRole('customer')}
+                  className={`p-3.5 rounded-xl border flex flex-col items-center justify-center gap-1.5 text-xs font-bold transition-all text-center ${
+                    pendingRole === 'customer'
+                      ? 'border-primary bg-primary/10 text-primary shadow-sm'
+                      : 'border-border text-muted-foreground hover:bg-muted/50'
+                  }`}
+                >
+                  <ShoppingCart className="h-6 w-6" />
+                  <span>Customer</span>
+                </button>
                 <button
                   type="button"
                   onClick={() => setPendingRole('business_owner')}

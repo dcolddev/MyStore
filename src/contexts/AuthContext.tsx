@@ -24,7 +24,7 @@ interface AuthContextType {
   ) => Promise<{ user: User | null; error: any }>;
   signIn: (email: string, password: string) => Promise<{ user: User | null; error: any }>;
   signInWithGoogle: (
-    preRole?: 'business_owner' | 'cashier',
+    preRole?: 'customer' | 'business_owner' | 'cashier',
     branchAccessCode?: string
   ) => Promise<{ user: User | null; error: any }>;
   joinBranchWithCode: (accessCode: string) => Promise<{ success: boolean; error?: string }>;
@@ -60,7 +60,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       if (accessToken) {
         window.history.replaceState(null, '', window.location.pathname);
 
-        const storedRole = (sessionStorage.getItem('google_auth_pre_role') as 'business_owner' | 'cashier') || undefined;
+        const storedRole = (sessionStorage.getItem('google_auth_pre_role') as 'customer' | 'business_owner' | 'cashier') || undefined;
         const storedCode = sessionStorage.getItem('google_auth_branch_code') || undefined;
         sessionStorage.removeItem('google_auth_pre_role');
         sessionStorage.removeItem('google_auth_branch_code');
@@ -141,7 +141,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   const signInWithGoogle = async (
-    preRole?: 'business_owner' | 'cashier',
+    preRole?: 'customer' | 'business_owner' | 'cashier',
     branchAccessCode?: string
   ): Promise<{ user: User | null; error: any }> => {
     const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || import.meta.env.VITE_GOOGLE_OAUTH_CLIENT_ID || '';

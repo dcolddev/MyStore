@@ -36,7 +36,7 @@ const Auth = () => {
         return;
       }
       setLoading(true);
-      const targetRole = role === 'customer' ? undefined : (role as 'business_owner' | 'cashier');
+      const targetRole = role;
       const { user, error } = await signInWithGoogle(targetRole, branchCode);
       if (error) {
         toast.error(error.message || 'Google Auth failed.');
