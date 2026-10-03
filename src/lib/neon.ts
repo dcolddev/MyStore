@@ -85,10 +85,18 @@ export const initNeonDatabase = async () => {
         dericas_per_bag NUMERIC(10, 2) DEFAULT 100,
         dericas_per_paint NUMERIC(10, 2) DEFAULT 5,
         unit_type VARCHAR(64) DEFAULT 'derica',
+        category VARCHAR(255) DEFAULT 'General',
+        image TEXT,
+        description TEXT,
         created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
       );
     `;
+
+    // Ensure products columns for e-commerce catalog
+    await sql`ALTER TABLE products ADD COLUMN IF NOT EXISTS category VARCHAR(255) DEFAULT 'General'`;
+    await sql`ALTER TABLE products ADD COLUMN IF NOT EXISTS image TEXT`;
+    await sql`ALTER TABLE products ADD COLUMN IF NOT EXISTS description TEXT`;
 
     // 4. Orders Table
     await sql`

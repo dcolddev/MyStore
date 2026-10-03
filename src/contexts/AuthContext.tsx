@@ -144,7 +144,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     preRole?: 'business_owner' | 'cashier',
     branchAccessCode?: string
   ): Promise<{ user: User | null; error: any }> => {
-    const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || '512366342113-fh3j1ehrdhohhp8udieggj707hhlp078.apps.googleusercontent.com';
+    const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || import.meta.env.VITE_GOOGLE_OAUTH_CLIENT_ID || '';
 
     if (preRole) sessionStorage.setItem('google_auth_pre_role', preRole);
     if (branchAccessCode) sessionStorage.setItem('google_auth_branch_code', branchAccessCode);

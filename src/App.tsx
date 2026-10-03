@@ -14,13 +14,14 @@ import StoreNew from "./pages/StoreNew";
 import Products from "./pages/Products";
 import ProductNew from "./pages/ProductNew";
 import ProductRestock from "./pages/ProductRestock";
-import SaleNew from "./pages/SaleNew";
 import SalesHistory from "./pages/SalesHistory";
 import Expenses from "./pages/Expenses";
 import ExpenseNew from "./pages/ExpenseNew";
 import Debts from "./pages/Debts";
 import DebtNew from "./pages/DebtNew";
 import Checkout from "./pages/Checkout";
+import CustomerCheckout from "./pages/CustomerCheckout";
+import CustomerAccount from "./pages/CustomerAccount";
 import OrderSuccess from "./pages/OrderSuccess";
 import NotFound from "./pages/NotFound";
 
@@ -35,14 +36,18 @@ const App = () => (
             <Toaster />
             <Sonner />
             <Routes>
+              {/* E-Commerce Storefront Routes */}
+              <Route path="/" element={<Index />} />
+              <Route path="/checkout" element={<CustomerCheckout />} />
+              <Route path="/account" element={<CustomerAccount />} />
+              <Route path="/order-success/:orderId" element={<OrderSuccess />} />
+
+              {/* Merchant / Cashier POS & Store Management Routes */}
               <Route path="/auth" element={<Auth />} />
               <Route path="/forgot-password" element={<ForgotPassword />} />
               <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/pos" element={<Checkout />} />
-              <Route path="/checkout" element={<Checkout />} />
-              <Route path="/stores/:storeId/checkout" element={<Checkout />} />
-              <Route path="/order-success/:orderId" element={<OrderSuccess />} />
               <Route path="/stores/new" element={<StoreNew />} />
               <Route path="/products" element={<Products />} />
               <Route path="/products/new" element={<ProductNew />} />
@@ -56,8 +61,8 @@ const App = () => (
               <Route path="/stores/:storeId/expenses/new" element={<ExpenseNew />} />
               <Route path="/stores/:storeId/debts" element={<Debts />} />
               <Route path="/stores/:storeId/debts/new" element={<DebtNew />} />
-              <Route path="/" element={<Dashboard />} />
-              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+              
+              {/* Catch-all */}
               <Route path="*" element={<NotFound />} />
             </Routes>
           </TooltipProvider>
