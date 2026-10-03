@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
+import { getNeonSql } from '@/lib/neon';
+import { db } from '@/lib/db';
 import { syncWithServer } from '@/lib/sync';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -60,24 +61,33 @@ const Dashboard = () => {
 
   const loadStores = useCallback(async () => {
     try {
-      const { data, error } = await supabase
-        .from('stores')
-        .select('*')
-        .order('created_at', { ascending: false });
+      let storeList: StoreRecord[] = [];
+      const sql = getNeonSql();
+      if (navigator.onLine && sql) {
+        try {
+          const res = await sql`SELECT * FROM stores ORDER BY created_at DESC`;
+          storeList = res as StoreRecord[];
+        } catch (err) {
+          console.warn('Neon stores query error, falling back to local DB:', err);
+        }
+      }
+      if (storeList.length === 0) {
+        storeList = await db.stores.toArray() as StoreRecord[];
+      }
 
-      if (error) throw error;
-
-      setStores(data || []);
-      if (data && data.length > 0) {
-        const matched = storeId ? data.find((s) => s.id === storeId) : data[0];
-        setSelectedStore(matched || data[0]);
+      setStores(storeList);
+      if (storeList.length > 0) {
+        const matched = storeId ? storeList.find((s) => s.id === storeId) : storeList[0];
+        setSelectedStore(matched || storeList[0]);
       }
     } catch (error: any) {
-      toast.error('Failed to load stores');
+      const localStores = await db.stores.toArray() as StoreRecord[];
+      setStores(localStores);
+      if (localStores.length > 0) setSelectedStore(localStores[0]);
     } finally {
       setLoading(false);
     }
-  }, [selectedStore]);
+  }, [selectedStore, storeId]);
 
   const loadDashboardStats = useCallback(async () => {
     if (!selectedStore) return;
@@ -85,39 +95,40 @@ const Dashboard = () => {
     try {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
-      
+
       const weekAgo = new Date(today);
       weekAgo.setDate(weekAgo.getDate() - 7);
 
-      const { data: todaySales } = await supabase
-        .from('sales')
-        .select('*')
-        .eq('store_id', selectedStore.id)
-        .gte('sale_date', today.toISOString());
+      const sql = getNeonSql();
+      let todaySales: any[] = [];
+      let weekSales: any[] = [];
+      let todayExpenses: any[] = [];
+      let weekExpenses: any[] = [];
+      let productsData: any[] = [];
 
-      const { data: weekSales } = await supabase
-        .from('sales')
-        .select('*')
-        .eq('store_id', selectedStore.id)
-        .gte('sale_date', weekAgo.toISOString());
+      if (navigator.onLine && sql) {
+        try {
+          todaySales = await sql`SELECT * FROM sales WHERE store_id = ${selectedStore.id} AND sale_date >= ${today.toISOString()}`;
+          weekSales = await sql`SELECT * FROM sales WHERE store_id = ${selectedStore.id} AND sale_date >= ${weekAgo.toISOString()}`;
+          todayExpenses = await sql`SELECT * FROM expenses WHERE store_id = ${selectedStore.id} AND expense_date >= ${today.toISOString()}`;
+          weekExpenses = await sql`SELECT * FROM expenses WHERE store_id = ${selectedStore.id} AND expense_date >= ${weekAgo.toISOString()}`;
+          productsData = await sql`SELECT * FROM products WHERE store_id = ${selectedStore.id} AND quantity <= reorder_level`;
+        } catch (err) {
+          console.warn('Neon stats query error, falling back to local DB:', err);
+        }
+      }
 
-      const { data: todayExpenses } = await supabase
-        .from('expenses')
-        .select('*')
-        .eq('store_id', selectedStore.id)
-        .gte('expense_date', today.toISOString());
+      if (todaySales.length === 0 && weekSales.length === 0) {
+        const localSales = await db.sales.where('store_id').equals(selectedStore.id).toArray();
+        const localExpenses = await db.expenses.where('store_id').equals(selectedStore.id).toArray();
+        const localProducts = await db.products.where('store_id').equals(selectedStore.id).toArray();
 
-      const { data: weekExpenses } = await supabase
-        .from('expenses')
-        .select('*')
-        .eq('store_id', selectedStore.id)
-        .gte('expense_date', weekAgo.toISOString());
-
-      const { data: productsData } = await supabase
-        .from('products')
-        .select('*')
-        .eq('store_id', selectedStore.id)
-        .lte('quantity', 5);
+        todaySales = localSales.filter((s) => new Date(s.sale_date) >= today);
+        weekSales = localSales.filter((s) => new Date(s.sale_date) >= weekAgo);
+        todayExpenses = localExpenses.filter((e) => new Date(e.expense_date) >= today);
+        weekExpenses = localExpenses.filter((e) => new Date(e.expense_date) >= weekAgo);
+        productsData = localProducts.filter((p) => p.quantity <= (p.reorder_level || 5));
+      }
 
       const todayTotalSales = todaySales?.reduce((sum, sale) => sum + Number(sale.total_revenue), 0) || 0;
       const todayTotalExpenses = todayExpenses?.reduce((sum, exp) => sum + Number(exp.amount), 0) || 0;
@@ -156,33 +167,6 @@ const Dashboard = () => {
     if (selectedStore) {
       loadDashboardStats();
     }
-  }, [selectedStore, loadDashboardStats]);
-
-  useEffect(() => {
-    if (!selectedStore) return;
-
-    const channel = supabase
-      .channel('dashboard-updates')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'sales', filter: `store_id=eq.${selectedStore.id}` },
-        loadDashboardStats
-      )
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'expenses', filter: `store_id=eq.${selectedStore.id}` },
-        loadDashboardStats
-      )
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'products', filter: `store_id=eq.${selectedStore.id}` },
-        loadDashboardStats
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
   }, [selectedStore, loadDashboardStats]);
 
   const handleCreateStore = () => {

@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '@/contexts/CartContext';
-import { supabase } from '@/integrations/supabase/client';
 import { sendOrderConfirmationEmail } from '@/lib/mailgun';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -80,72 +79,7 @@ export default function Checkout() {
           })),
         });
       } catch (neonErr) {
-        console.warn('Neon database insert notice:', neonErr);
-      }
-
-      // 2. Insert Order into Supabase Database
-      try {
-        const { data: orderData, error: orderError } = await supabase
-          .from('orders')
-          .insert({
-            store_id: firstStoreId,
-            customer_name: customerName,
-            customer_email: customerEmail,
-            shipping_address: fullShippingAddress,
-            phone: phone || null,
-            total_amount: grandTotal,
-            payment_method: paymentMethod,
-            payment_status: 'paid',
-            order_status: 'completed',
-          })
-          .select()
-          .single();
-
-        if (!orderError && orderData) {
-          finalOrderId = orderData.id;
-
-          const orderItems = cart.map((item) => ({
-            order_id: finalOrderId,
-            product_id: item.id.length === 36 ? item.id : null,
-            product_name: item.name,
-            quantity: item.quantity,
-            unit_price: item.selling_price,
-            total_price: item.selling_price * item.quantity,
-          }));
-
-          await supabase.from('order_items').insert(orderItems);
-
-          for (const item of cart) {
-            if (item.id.length === 36) {
-              const { data: existingProd } = await supabase
-                .from('products')
-                .select('quantity, cost_price')
-                .eq('id', item.id)
-                .single();
-
-              if (existingProd) {
-                const newQty = Math.max(0, existingProd.quantity - item.quantity);
-                await supabase.from('products').update({ quantity: newQty }).eq('id', item.id);
-
-                const unitCost = Number(existingProd.cost_price) || item.selling_price * 0.7;
-                const totalRev = item.selling_price * item.quantity;
-                const totalCost = unitCost * item.quantity;
-
-                await supabase.from('sales').insert({
-                  store_id: firstStoreId,
-                  product_id: item.id,
-                  quantity: item.quantity,
-                  total_revenue: totalRev,
-                  total_cost: totalCost,
-                  profit: totalRev - totalCost,
-                  sale_date: new Date().toISOString(),
-                });
-              }
-            }
-          }
-        }
-      } catch (dbErr) {
-        console.warn('Supabase DB notice:', dbErr);
+        console.warn('Neon database order save notice:', neonErr);
       }
 
       // Cache order locally for receipt rendering
@@ -402,7 +336,7 @@ export default function Checkout() {
                 </Button>
 
                 <p className="text-xs text-center text-muted-foreground flex items-center justify-center gap-1 pt-2">
-                  <ShieldCheck className="h-4 w-4 text-success" /> 256-Bit Encrypted & Persisted via Supabase
+                  <ShieldCheck className="h-4 w-4 text-success" /> 256-Bit Encrypted & Persisted via Neon Postgres
                 </p>
               </CardContent>
             </Card>

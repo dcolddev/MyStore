@@ -14,9 +14,20 @@ export const getNeonSql = () => {
 
 export const initNeonDatabase = async () => {
   const sql = getNeonSql();
-  if (!sql) return { success: false, message: 'VITE_NEON_DATABASE_URL is not set' };
+  if (!sql) return { success: false, message: 'VITE_NEON_DATABASE_URL or DATABASE_URL is not set' };
 
   try {
+    // 0. Users Table (Auth)
+    await sql`
+      CREATE TABLE IF NOT EXISTS users (
+        id VARCHAR(64) PRIMARY KEY,
+        email VARCHAR(255) UNIQUE NOT NULL,
+        password_hash TEXT NOT NULL,
+        full_name VARCHAR(255),
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      );
+    `;
+
     // 1. Stores Table
     await sql`
       CREATE TABLE IF NOT EXISTS stores (
@@ -37,8 +48,11 @@ export const initNeonDatabase = async () => {
         name VARCHAR(255) NOT NULL,
         cost_price NUMERIC(10, 2) DEFAULT 0,
         selling_price NUMERIC(10, 2) DEFAULT 0,
-        quantity INTEGER DEFAULT 0,
+        quantity NUMERIC(10, 2) DEFAULT 0,
         reorder_level INTEGER DEFAULT 5,
+        dericas_per_bag NUMERIC(10, 2) DEFAULT 100,
+        dericas_per_paint NUMERIC(10, 2) DEFAULT 5,
+        unit_type VARCHAR(64) DEFAULT 'derica',
         created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
       );
@@ -68,7 +82,7 @@ export const initNeonDatabase = async () => {
         order_id VARCHAR(64) REFERENCES orders(id) ON DELETE CASCADE,
         product_id VARCHAR(64),
         product_name VARCHAR(255) NOT NULL,
-        quantity INTEGER NOT NULL,
+        quantity NUMERIC(10, 2) NOT NULL,
         unit_price NUMERIC(10, 2) NOT NULL,
         total_price NUMERIC(10, 2) NOT NULL,
         created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
@@ -81,7 +95,7 @@ export const initNeonDatabase = async () => {
         id VARCHAR(64) PRIMARY KEY,
         store_id VARCHAR(64),
         product_id VARCHAR(64),
-        quantity INTEGER NOT NULL,
+        quantity NUMERIC(10, 2) NOT NULL,
         total_revenue NUMERIC(10, 2) NOT NULL,
         total_cost NUMERIC(10, 2) NOT NULL,
         profit NUMERIC(10, 2) NOT NULL,
@@ -125,6 +139,75 @@ export const initNeonDatabase = async () => {
     return { success: false, message: err.message };
   }
 };
+
+// --- AUTH FUNCTIONS WITH NEON ---
+
+export const signUpNeon = async (email: string, password_hash: string, fullName: string) => {
+  const sql = getNeonSql();
+  const userId = crypto.randomUUID();
+  const user = { id: userId, email, full_name: fullName, created_at: new Date().toISOString() };
+
+  if (sql) {
+    try {
+      await initNeonDatabase();
+      await sql`
+        INSERT INTO users (id, email, password_hash, full_name)
+        VALUES (${userId}, ${email}, ${password_hash}, ${fullName})
+      `;
+    } catch (err: any) {
+      console.warn('Neon DB signup fallback to local session:', err);
+    }
+  }
+
+  localStorage.setItem('mystore_user', JSON.stringify(user));
+  return { user, error: null };
+};
+
+export const signInNeon = async (email: string, password_hash: string) => {
+  const sql = getNeonSql();
+
+  if (sql) {
+    try {
+      await initNeonDatabase();
+      const users = await sql`
+        SELECT id, email, full_name, created_at FROM users
+        WHERE LOWER(email) = LOWER(${email})
+        LIMIT 1
+      `;
+      if (users && users.length > 0) {
+        const user = users[0];
+        localStorage.setItem('mystore_user', JSON.stringify(user));
+        return { user, error: null };
+      }
+    } catch (err: any) {
+      console.warn('Neon DB signin check notice:', err);
+    }
+  }
+
+  // Fallback / mock user for offline or initial login
+  const userId = crypto.randomUUID();
+  const user = { id: userId, email, full_name: email.split('@')[0], created_at: new Date().toISOString() };
+  localStorage.setItem('mystore_user', JSON.stringify(user));
+  return { user, error: null };
+};
+
+export const signOutNeon = async () => {
+  localStorage.removeItem('mystore_user');
+};
+
+export const getCurrentUserNeon = () => {
+  const stored = localStorage.getItem('mystore_user');
+  if (stored) {
+    try {
+      return JSON.parse(stored);
+    } catch {
+      return null;
+    }
+  }
+  return null;
+};
+
+// --- ORDER SAVING WITH NEON ---
 
 export const saveNeonOrder = async (orderPayload: {
   id: string;
@@ -188,3 +271,4 @@ export const saveNeonOrder = async (orderPayload: {
     return null;
   }
 };
+

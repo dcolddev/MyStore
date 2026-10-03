@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ArrowLeft, PackagePlus } from 'lucide-react';
 import { db, LocalProduct } from '@/lib/db';
-import { supabase } from '@/integrations/supabase/client';
+import { getNeonSql } from '@/lib/neon';
 import { syncWithServer } from '@/lib/sync';
 import { toast } from 'sonner';
 
@@ -83,20 +83,10 @@ const ProductRestock = () => {
     const expenseAmount = costPerDerica * qtyInDerica;
 
     try {
-      // Update product quantity and cost (cost is per derica)
-      const { error: productError } = await supabase
-        .from('products')
-        .update({
-          quantity: newQuantity,
-          cost_price: costPerDerica,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', product.id);
-
-      if (productError) throw productError;
-
-      // Create expense record
+      const sql = getNeonSql();
+      const expenseId = crypto.randomUUID();
       const expenseData = {
+        id: expenseId,
         store_id: storeId,
         amount: expenseAmount,
         category: 'Restock',
@@ -105,13 +95,18 @@ const ProductRestock = () => {
         created_at: new Date().toISOString(),
       };
 
-      const { data: expenseResult, error: expenseError } = await supabase
-        .from('expenses')
-        .insert(expenseData)
-        .select()
-        .single();
+      if (sql) {
+        await sql`
+          UPDATE products
+          SET quantity = ${newQuantity}, cost_price = ${costPerDerica}, updated_at = CURRENT_TIMESTAMP
+          WHERE id = ${product.id}
+        `;
 
-      if (expenseError) throw expenseError;
+        await sql`
+          INSERT INTO expenses (id, store_id, amount, category, description)
+          VALUES (${expenseId}, ${storeId}, ${expenseAmount}, 'Restock', ${`Restocked ${quantity} ${unit} of ${product.name}`})
+        `;
+      }
 
       // Update local DB
       await db.products.update(product.id, {
@@ -122,7 +117,7 @@ const ProductRestock = () => {
       });
 
       await db.expenses.add({
-        ...expenseResult,
+        ...expenseData,
         synced: true,
       });
 

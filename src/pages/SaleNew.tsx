@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
 import { db, LocalProduct } from '@/lib/db';
 import { syncWithServer } from '@/lib/sync';
 import { Button } from '@/components/ui/button';

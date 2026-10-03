@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
+import { getNeonSql } from '@/lib/neon';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { CheckCircle2, ShoppingBag, Mail, Printer, ArrowLeft, PackageCheck } from 'lucide-react';
@@ -21,23 +21,17 @@ export default function OrderSuccess() {
 
   const fetchOrderDetails = async () => {
     try {
-      const { data: orderData, error: orderErr } = await supabase
-        .from('orders')
-        .select('*')
-        .eq('id', orderId!)
-        .single();
-
-      if (!orderErr && orderData) {
-        setOrder(orderData);
-        const { data: itemsData } = await supabase
-          .from('order_items')
-          .select('*')
-          .eq('order_id', orderId!);
-
-        setItems(itemsData || []);
-        return;
+      const sql = getNeonSql();
+      if (sql) {
+        const orderRes = await sql`SELECT * FROM orders WHERE id = ${orderId!} LIMIT 1`;
+        if (orderRes && orderRes.length > 0) {
+          setOrder(orderRes[0]);
+          const itemsRes = await sql`SELECT * FROM order_items WHERE order_id = ${orderId!}`;
+          setItems(itemsRes || []);
+          return;
+        }
       }
-      throw new Error('Supabase order not found, fallback to local');
+      throw new Error('Neon order not found, fallback to local');
     } catch {
       const cachedStr = localStorage.getItem(`pocket_order_${orderId}`);
       if (cachedStr) {
@@ -71,7 +65,7 @@ export default function OrderSuccess() {
           </div>
           <h1 className="text-3xl font-bold tracking-tight">Order Confirmed!</h1>
           <p className="text-muted-foreground">
-            Thank you for shopping with us. Your order has been placed and saved in Supabase.
+            Thank you for shopping with us. Your order has been placed and saved in Neon Postgres.
           </p>
         </div>
 

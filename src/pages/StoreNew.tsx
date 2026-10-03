@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ArrowLeft, Store } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
+import { getNeonSql } from '@/lib/neon';
 import { db } from '@/lib/db';
 import { toast } from 'sonner';
 
@@ -31,37 +31,35 @@ const StoreNew = () => {
       updated_at: new Date().toISOString(),
     };
 
+    const storeId = crypto.randomUUID();
+    const fullStoreData = { id: storeId, ...storeData };
+
     try {
-      // Try to save to server first
-      const { data, error } = await supabase
-        .from('stores')
-        .insert(storeData)
-        .select()
-        .single();
+      const sql = getNeonSql();
+      if (sql) {
+        await sql`
+          INSERT INTO stores (id, owner_id, name, location)
+          VALUES (${storeId}, ${user.id}, ${name}, ${location || null})
+        `;
+      }
 
-      if (error) throw error;
-
-      // Save to local DB
       await db.stores.add({
-        ...data,
+        ...fullStoreData,
         synced: true,
       });
 
       toast.success('Store created successfully!');
       navigate('/dashboard');
     } catch (error: any) {
-      // If offline, save to local DB and queue for sync
-      const localId = crypto.randomUUID();
       await db.stores.add({
-        id: localId,
-        ...storeData,
+        ...fullStoreData,
         synced: false,
       });
 
       await db.syncQueue.add({
         table: 'stores',
         operation: 'create',
-        data: { id: localId, ...storeData },
+        data: fullStoreData,
         timestamp: new Date().toISOString(),
       });
 

@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCart } from '@/contexts/CartContext';
 import { CartDrawer } from '@/components/CartDrawer';
-import { supabase } from '@/integrations/supabase/client';
+import { getNeonSql } from '@/lib/neon';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
@@ -78,22 +78,25 @@ export default function Index() {
 
   const loadProducts = async () => {
     try {
-      const { data, error } = await supabase.from('products').select('*');
-      if (!error && data && data.length > 0) {
-        const formatted: ProductItem[] = data.map((p, idx) => ({
-          id: p.id,
-          store_id: p.store_id,
-          name: p.name,
-          selling_price: Number(p.selling_price),
-          cost_price: Number(p.cost_price),
-          quantity: p.quantity,
-          category: idx % 2 === 0 ? 'Electronics' : 'Groceries',
-          image: idx === 0 ? '/images/electronics.png' : idx === 1 ? '/images/watch.png' : '/images/coffee.png',
-        }));
-        setProducts(formatted);
-      } else {
-        setProducts(DEMO_PRODUCTS);
+      const sql = getNeonSql();
+      if (sql) {
+        const data = await sql`SELECT * FROM products ORDER BY created_at DESC`;
+        if (data && data.length > 0) {
+          const formatted: ProductItem[] = data.map((p: any, idx: number) => ({
+            id: p.id,
+            store_id: p.store_id,
+            name: p.name,
+            selling_price: Number(p.selling_price),
+            cost_price: Number(p.cost_price),
+            quantity: Number(p.quantity),
+            category: idx % 2 === 0 ? 'Electronics' : 'Groceries',
+            image: idx === 0 ? '/images/electronics.png' : idx === 1 ? '/images/watch.png' : '/images/coffee.png',
+          }));
+          setProducts(formatted);
+          return;
+        }
       }
+      setProducts(DEMO_PRODUCTS);
     } catch {
       setProducts(DEMO_PRODUCTS);
     } finally {

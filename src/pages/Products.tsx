@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { db, LocalProduct } from '@/lib/db';
-import { supabase } from '@/integrations/supabase/client';
+import { getNeonSql } from '@/lib/neon';
 import { syncWithServer } from '@/lib/sync';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -31,12 +31,13 @@ const Products = () => {
   const loadStores = async () => {
     try {
       let storeList: any[] = [];
-      if (navigator.onLine) {
-        const { data } = await supabase
-          .from('stores')
-          .select('*')
-          .order('created_at', { ascending: false });
-        storeList = data || [];
+      const sql = getNeonSql();
+      if (navigator.onLine && sql) {
+        try {
+          storeList = await sql`SELECT * FROM stores ORDER BY created_at DESC`;
+        } catch (err) {
+          console.warn('Neon stores query error:', err);
+        }
       }
       if (storeList.length === 0) {
         storeList = await db.stores.toArray();
@@ -58,16 +59,16 @@ const Products = () => {
 
   const loadProducts = async (sId: string) => {
     try {
-      if (navigator.onLine) {
-        const { data } = await supabase
-          .from('products')
-          .select('*')
-          .eq('store_id', sId)
-          .order('created_at', { ascending: false });
-
-        if (data && data.length > 0) {
-          setProducts(data as any);
-          return;
+      const sql = getNeonSql();
+      if (navigator.onLine && sql) {
+        try {
+          const data = await sql`SELECT * FROM products WHERE store_id = ${sId} ORDER BY created_at DESC`;
+          if (data && data.length > 0) {
+            setProducts(data as any);
+            return;
+          }
+        } catch (err) {
+          console.warn('Neon products query error:', err);
         }
       }
       const localProducts = await db.products.where('store_id').equals(sId).toArray();
@@ -80,12 +81,10 @@ const Products = () => {
 
   const handleDelete = async (productId: string) => {
     try {
-      const { error } = await supabase
-        .from('products')
-        .delete()
-        .eq('id', productId);
-
-      if (error) throw error;
+      const sql = getNeonSql();
+      if (sql) {
+        await sql`DELETE FROM products WHERE id = ${productId}`;
+      }
 
       await db.products.delete(productId);
       toast.success('Product deleted successfully');

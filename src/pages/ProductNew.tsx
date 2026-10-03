@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ArrowLeft, Package } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
+import { getNeonSql } from '@/lib/neon';
 import { db } from '@/lib/db';
 import { toast } from 'sonner';
 
@@ -71,34 +71,35 @@ const ProductNew = () => {
       updated_at: new Date().toISOString(),
     };
 
-    try {
-      const { data, error } = await supabase
-        .from('products')
-        .insert(productData)
-        .select()
-        .single();
+    const productId = crypto.randomUUID();
+    const fullProductData = { id: productId, ...productData };
 
-      if (error) throw error;
+    try {
+      const sql = getNeonSql();
+      if (sql) {
+        await sql`
+          INSERT INTO products (id, store_id, name, cost_price, selling_price, quantity, reorder_level, dericas_per_bag, dericas_per_paint, unit_type)
+          VALUES (${productId}, ${storeId}, ${name}, ${costPerDerica}, ${sellingPerDerica}, ${qtyInDerica}, ${parseInt(reorderLevel)}, ${parseFloat(dericasPerBag)}, ${parseFloat(dericasPerPaint)}, ${unit})
+        `;
+      }
 
       await db.products.add({
-        ...data,
+        ...fullProductData,
         synced: true,
       });
 
       toast.success('Product added successfully!');
       navigate(`/stores/${storeId}/products`);
     } catch (error: any) {
-      const localId = crypto.randomUUID();
       await db.products.add({
-        id: localId,
-        ...productData,
+        ...fullProductData,
         synced: false,
       });
 
       await db.syncQueue.add({
         table: 'products',
         operation: 'create',
-        data: { id: localId, ...productData },
+        data: fullProductData,
         timestamp: new Date().toISOString(),
       });
 
