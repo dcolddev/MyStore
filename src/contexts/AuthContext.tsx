@@ -34,6 +34,27 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     if (currentUser) {
       setUser(currentUser);
     }
+
+    // Check if returning from Google OAuth redirect with access token in URL hash
+    if (window.location.hash.includes('access_token=')) {
+      const params = new URLSearchParams(window.location.hash.substring(1));
+      const accessToken = params.get('access_token');
+      if (accessToken) {
+        window.history.replaceState(null, '', window.location.pathname);
+        fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        })
+          .then((res) => res.json())
+          .then(async (googleUser) => {
+            if (googleUser?.email) {
+              const res = await signInNeon(googleUser.email, 'google-oauth', googleUser.name || googleUser.email.split('@')[0]);
+              if (res.user) setUser(res.user);
+            }
+          })
+          .catch((err) => console.error('Google OAuth profile error:', err));
+      }
+    }
+
     setLoading(false);
   }, []);
 
@@ -53,13 +74,52 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     return res;
   };
 
-  const signInWithGoogle = async () => {
-    // Google Sign-In with Neon session
-    const res = await signInNeon('google_user@mystore.app', 'google-oauth');
-    if (res.user) {
-      setUser(res.user);
-    }
-    return res;
+  const signInWithGoogle = async (): Promise<{ user: User | null; error: any }> => {
+    const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || '512366342113-fh3j1ehrdhohhp8udieggj707hhlp078.apps.googleusercontent.com';
+
+    return new Promise((resolve) => {
+      // 1. Try Google Identity Services Token Client Popup first
+      if (typeof window !== 'undefined' && (window as any).google?.accounts?.oauth2) {
+        try {
+          const client = (window as any).google.accounts.oauth2.initTokenClient({
+            client_id: clientId,
+            scope: 'email profile openid',
+            callback: async (response: any) => {
+              if (response.access_token) {
+                try {
+                  const userInfoRes = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+                    headers: { Authorization: `Bearer ${response.access_token}` },
+                  });
+                  const googleUser = await userInfoRes.json();
+                  if (googleUser?.email) {
+                    const res = await signInNeon(googleUser.email, 'google-oauth', googleUser.name || googleUser.email.split('@')[0]);
+                    if (res.user) {
+                      setUser(res.user);
+                      resolve({ user: res.user, error: null });
+                      return;
+                    }
+                  }
+                } catch (fetchErr: any) {
+                  resolve({ user: null, error: fetchErr });
+                  return;
+                }
+              }
+              resolve({ user: null, error: new Error(response.error || 'Google auth cancelled') });
+            },
+          });
+          client.requestAccessToken();
+          return;
+        } catch (e) {
+          console.warn('GIS Token client error, falling back to redirect:', e);
+        }
+      }
+
+      // 2. Fallback: Standard Google OAuth 2.0 Redirect
+      const redirectUri = encodeURIComponent(`${window.location.origin}/auth`);
+      const googleOAuthUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=token&scope=email%20profile%20openid&prompt=select_account`;
+      window.location.href = googleOAuthUrl;
+      resolve({ user: null, error: null });
+    });
   };
 
   const signOut = async () => {

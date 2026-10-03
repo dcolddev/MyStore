@@ -163,7 +163,7 @@ export const signUpNeon = async (email: string, password_hash: string, fullName:
   return { user, error: null };
 };
 
-export const signInNeon = async (email: string, password_hash: string) => {
+export const signInNeon = async (email: string, password_hash: string, fullName?: string) => {
   const sql = getNeonSql();
 
   if (sql) {
@@ -179,14 +179,27 @@ export const signInNeon = async (email: string, password_hash: string) => {
         localStorage.setItem('mystore_user', JSON.stringify(user));
         return { user, error: null };
       }
+
+      // If user not found but fullName provided (e.g. Google auth), auto create user in Neon
+      if (fullName) {
+        const newUserId = crypto.randomUUID();
+        await sql`
+          INSERT INTO users (id, email, password_hash, full_name)
+          VALUES (${newUserId}, ${email}, ${password_hash}, ${fullName})
+          ON CONFLICT (email) DO NOTHING
+        `;
+        const newUser = { id: newUserId, email, full_name: fullName, created_at: new Date().toISOString() };
+        localStorage.setItem('mystore_user', JSON.stringify(newUser));
+        return { user: newUser, error: null };
+      }
     } catch (err: any) {
       console.warn('Neon DB signin check notice:', err);
     }
   }
 
-  // Fallback / mock user for offline or initial login
+  // Fallback / mock user for offline
   const userId = crypto.randomUUID();
-  const user = { id: userId, email, full_name: email.split('@')[0], created_at: new Date().toISOString() };
+  const user = { id: userId, email, full_name: fullName || email.split('@')[0], created_at: new Date().toISOString() };
   localStorage.setItem('mystore_user', JSON.stringify(user));
   return { user, error: null };
 };
