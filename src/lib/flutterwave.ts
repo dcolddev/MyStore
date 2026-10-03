@@ -23,7 +23,7 @@ export const loadFlutterwaveScript = (): Promise<boolean> => {
     }
 
     const script = document.createElement('script');
-    script.src = 'https://checkout.flutterwave.com/v3.inline.js';
+    script.src = 'https://checkout.flutterwave.com/v3.js';
     script.async = true;
     script.onload = () => resolve(true);
     script.onerror = () => {
