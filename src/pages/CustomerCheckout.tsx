@@ -206,12 +206,13 @@ export default function CustomerCheckout() {
         });
       } catch (err: any) {
         setLoading(false);
-        toast.error(
-          err?.message?.includes('VITE_FLUTTERWAVE_PUBLIC_KEY')
-            ? 'Flutterwave is not configured — add your real Public Key to .env and restart the dev server.'
-            : 'Could not open Flutterwave. Check your internet connection and try again.',
-          { duration: 8000 }
-        );
+        let errorMsg = 'Could not open Flutterwave. Check your internet connection and try again.';
+        if (err?.message === 'MISSING_KEY') {
+          errorMsg = 'Flutterwave is not configured properly in Vercel Environment Variables. Redeploy after setting the real key.';
+        } else if (err?.message === 'SCRIPT_BLOCKED') {
+          errorMsg = 'Flutterwave checkout was blocked by your browser. Please disable Brave Shields/Adblockers or use another browser.';
+        }
+        toast.error(errorMsg, { duration: 8000 });
         console.error('[Flutterwave init error]', err?.message);
       }
       return;

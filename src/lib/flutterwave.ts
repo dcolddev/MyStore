@@ -36,12 +36,14 @@ export const loadFlutterwaveScript = (): Promise<boolean> => {
 
 export const payWithFlutterwave = async (config: FlutterwavePaymentConfig): Promise<void> => {
   const loaded = await loadFlutterwaveScript();
-  const publicKey =
-    import.meta.env.VITE_FLUTTERWAVE_PUBLIC_KEY ||
-    import.meta.env.FLUTTERWAVE_PUBLIC_KEY;
+  const publicKey = import.meta.env.VITE_FLUTTERWAVE_PUBLIC_KEY;
 
-  if (!publicKey) {
-    console.error('Flutterwave Public Key missing in environment variables (VITE_FLUTTERWAVE_PUBLIC_KEY)');
+  if (!publicKey || publicKey.includes('FLWPUBK_TEST-2b9534ac2b100415b43b3723d9d37e0c-X')) {
+    throw new Error('MISSING_KEY');
+  }
+
+  if (!loaded || !(window as any).FlutterwaveCheckout) {
+    throw new Error('SCRIPT_BLOCKED');
   }
 
   const tx_ref = config.tx_ref || `flw_${Date.now()}_${Math.floor(Math.random() * 100000)}`;
@@ -77,19 +79,7 @@ export const payWithFlutterwave = async (config: FlutterwavePaymentConfig): Prom
       return;
     } catch (err) {
       console.error('Flutterwave Checkout modal error:', err);
+      throw new Error('MODAL_ERROR');
     }
   }
-
-  // If we reach here, the Flutterwave script failed to initialise.
-  // This is most likely because:
-  //   1. VITE_FLUTTERWAVE_PUBLIC_KEY is missing or still the placeholder value in .env
-  //   2. The user's browser blocked the Flutterwave CDN script (ad-blocker, etc.)
-  //   3. No internet connection
-  //
-  // We must NOT silently approve the payment — throw an error so the UI can inform the user.
-  throw new Error(
-    'Flutterwave checkout could not be initialised. ' +
-    'Please check that VITE_FLUTTERWAVE_PUBLIC_KEY is set to your real Flutterwave Public Key ' +
-    'in the .env file, then restart the dev server.'
-  );
 };
