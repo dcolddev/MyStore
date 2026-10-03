@@ -6,13 +6,15 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
-import { Store } from 'lucide-react';
+import { Store, UserCheck, KeyRound, Building2 } from 'lucide-react';
 
 const Auth = () => {
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
+  const [role, setRole] = useState<'business_owner' | 'cashier'>('business_owner');
+  const [branchCode, setBranchCode] = useState('');
   const [loading, setLoading] = useState(false);
   const { signUp, signIn, signInWithGoogle, user } = useAuth();
   const navigate = useNavigate();
@@ -59,11 +61,18 @@ const Auth = () => {
           setLoading(false);
           return;
         }
-        const { error } = await signUp(email, password, fullName);
+
+        if (role === 'cashier' && !branchCode.trim()) {
+          toast.error('Please enter your Branch Access Code');
+          setLoading(false);
+          return;
+        }
+
+        const { error } = await signUp(email, password, fullName, role, branchCode);
         if (error) {
           toast.error(error.message);
         } else {
-          toast.success('Account created! You can now sign in.');
+          toast.success('Account created! You can now access your dashboard.');
           navigate('/dashboard');
         }
       }
@@ -86,8 +95,8 @@ const Auth = () => {
           </CardTitle>
           <CardDescription>
             {isLogin
-              ? 'Sign in to manage your stores'
-              : 'Start managing your business today'}
+              ? 'Sign in to manage your stores and branches'
+              : 'Sign up as a Business Owner or Cashier'}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -130,18 +139,74 @@ const Auth = () => {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             {!isLogin && (
-              <div className="space-y-2">
-                <Label htmlFor="fullName">Full Name</Label>
-                <Input
-                  id="fullName"
-                  type="text"
-                  placeholder="John Doe"
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                  required={!isLogin}
-                />
-              </div>
+              <>
+                {/* Role Selector */}
+                <div className="space-y-2">
+                  <Label>Select Account Type</Label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setRole('business_owner')}
+                      className={`p-3 rounded-lg border flex flex-col items-center gap-1.5 text-xs font-semibold transition-all ${
+                        role === 'business_owner'
+                          ? 'border-primary bg-primary/10 text-primary'
+                          : 'border-border text-muted-foreground hover:bg-muted/50'
+                      }`}
+                    >
+                      <Building2 className="h-5 w-5" />
+                      <span>Business Owner</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setRole('cashier')}
+                      className={`p-3 rounded-lg border flex flex-col items-center gap-1.5 text-xs font-semibold transition-all ${
+                        role === 'cashier'
+                          ? 'border-primary bg-primary/10 text-primary'
+                          : 'border-border text-muted-foreground hover:bg-muted/50'
+                      }`}
+                    >
+                      <UserCheck className="h-5 w-5" />
+                      <span>Store Cashier</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Branch Code input for cashier */}
+                {role === 'cashier' && (
+                  <div className="space-y-2 p-3 bg-muted/40 rounded-xl border border-primary/20">
+                    <Label htmlFor="branchCode" className="flex items-center gap-1.5 text-xs font-bold text-primary">
+                      <KeyRound className="h-3.5 w-3.5" />
+                      Branch Access Code (Provided by Owner)
+                    </Label>
+                    <Input
+                      id="branchCode"
+                      type="text"
+                      placeholder="e.g. BR-8X92K"
+                      value={branchCode}
+                      onChange={(e) => setBranchCode(e.target.value.toUpperCase())}
+                      required={role === 'cashier'}
+                      className="font-mono uppercase font-bold tracking-wider"
+                    />
+                    <p className="text-[11px] text-muted-foreground">
+                      Ask your business owner for your branch's 5-character access code to connect.
+                    </p>
+                  </div>
+                )}
+
+                <div className="space-y-2">
+                  <Label htmlFor="fullName">Full Name</Label>
+                  <Input
+                    id="fullName"
+                    type="text"
+                    placeholder="John Doe"
+                    value={fullName}
+                    onChange={(e) => setFullName(e.target.value)}
+                    required={!isLogin}
+                  />
+                </div>
+              </>
             )}
+
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <Input
@@ -175,8 +240,8 @@ const Auth = () => {
                 minLength={6}
               />
             </div>
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? 'Please wait...' : isLogin ? 'Sign In' : 'Sign Up'}
+            <Button type="submit" className="w-full py-5 font-bold" disabled={loading}>
+              {loading ? 'Please wait...' : isLogin ? 'Sign In' : role === 'cashier' ? 'Join Branch as Cashier' : 'Create Owner Account'}
             </Button>
           </form>
 
@@ -197,3 +262,4 @@ const Auth = () => {
 };
 
 export default Auth;
+

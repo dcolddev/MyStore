@@ -12,6 +12,16 @@ export const getNeonSql = () => {
   }
 };
 
+
+export const generateAccessCode = (prefix = 'BR'): string => {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let code = '';
+  for (let i = 0; i < 5; i++) {
+    code += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return `${prefix}-${code}`;
+};
+
 export const initNeonDatabase = async () => {
   const sql = getNeonSql();
   if (!sql) return { success: false, message: 'VITE_NEON_DATABASE_URL or DATABASE_URL is not set' };
@@ -24,9 +34,15 @@ export const initNeonDatabase = async () => {
         email VARCHAR(255) UNIQUE NOT NULL,
         password_hash TEXT NOT NULL,
         full_name VARCHAR(255),
+        role VARCHAR(64) DEFAULT 'business_owner',
+        store_id VARCHAR(64),
         created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
       );
     `;
+
+    // Ensure users columns
+    await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS role VARCHAR(64) DEFAULT 'business_owner'`;
+    await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS store_id VARCHAR(64)`;
 
     // 1. Stores Table
     await sql`
@@ -35,12 +51,28 @@ export const initNeonDatabase = async () => {
         owner_id VARCHAR(64),
         name VARCHAR(255) NOT NULL,
         location VARCHAR(255),
+        access_code VARCHAR(64) UNIQUE,
         created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
       );
     `;
 
-    // 2. Products Table
+    // Ensure stores access_code column
+    await sql`ALTER TABLE stores ADD COLUMN IF NOT EXISTS access_code VARCHAR(64)`;
+
+    // 2. Store Cashiers Table
+    await sql`
+      CREATE TABLE IF NOT EXISTS store_cashiers (
+        id VARCHAR(64) PRIMARY KEY,
+        store_id VARCHAR(64) REFERENCES stores(id) ON DELETE CASCADE,
+        cashier_id VARCHAR(64) REFERENCES users(id) ON DELETE CASCADE,
+        cashier_email VARCHAR(255),
+        cashier_name VARCHAR(255),
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      );
+    `;
+
+    // 3. Products Table
     await sql`
       CREATE TABLE IF NOT EXISTS products (
         id VARCHAR(64) PRIMARY KEY,
@@ -58,7 +90,7 @@ export const initNeonDatabase = async () => {
       );
     `;
 
-    // 3. Orders Table
+    // 4. Orders Table
     await sql`
       CREATE TABLE IF NOT EXISTS orders (
         id VARCHAR(64) PRIMARY KEY,
@@ -75,7 +107,7 @@ export const initNeonDatabase = async () => {
       );
     `;
 
-    // 4. Order Items Table
+    // 5. Order Items Table
     await sql`
       CREATE TABLE IF NOT EXISTS order_items (
         id VARCHAR(64) PRIMARY KEY,
@@ -89,7 +121,7 @@ export const initNeonDatabase = async () => {
       );
     `;
 
-    // 5. Sales Table
+    // 6. Sales Table
     await sql`
       CREATE TABLE IF NOT EXISTS sales (
         id VARCHAR(64) PRIMARY KEY,
@@ -104,7 +136,7 @@ export const initNeonDatabase = async () => {
       );
     `;
 
-    // 6. Expenses Table
+    // 7. Expenses Table
     await sql`
       CREATE TABLE IF NOT EXISTS expenses (
         id VARCHAR(64) PRIMARY KEY,
@@ -117,7 +149,7 @@ export const initNeonDatabase = async () => {
       );
     `;
 
-    // 7. Customer Debts Table
+    // 8. Customer Debts Table
     await sql`
       CREATE TABLE IF NOT EXISTS customer_debts (
         id VARCHAR(64) PRIMARY KEY,
@@ -142,20 +174,70 @@ export const initNeonDatabase = async () => {
 
 // --- AUTH FUNCTIONS WITH NEON ---
 
-export const signUpNeon = async (email: string, password_hash: string, fullName: string) => {
+export const signUpNeon = async (
+  email: string,
+  password_hash: string,
+  fullName: string,
+  role: 'business_owner' | 'cashier' = 'business_owner',
+  branchAccessCode?: string
+) => {
   const sql = getNeonSql();
   const userId = crypto.randomUUID();
-  const user = { id: userId, email, full_name: fullName, created_at: new Date().toISOString() };
+  let assignedStoreId: string | null = null;
+
+  if (role === 'cashier') {
+    if (!branchAccessCode || !branchAccessCode.trim()) {
+      return { user: null, error: new Error('Branch Access Code is required for cashier sign up.') };
+    }
+
+    if (sql) {
+      try {
+        await initNeonDatabase();
+        const matchedStores = await sql`
+          SELECT id, name FROM stores
+          WHERE LOWER(access_code) = LOWER(${branchAccessCode.trim()})
+          LIMIT 1
+        `;
+        if (!matchedStores || matchedStores.length === 0) {
+          return { user: null, error: new Error('Invalid Branch Access Code. Please verify with your business owner.') };
+        }
+        assignedStoreId = matchedStores[0].id;
+      } catch (err: any) {
+        console.error('Error validating access code:', err);
+      }
+    }
+  }
+
+  const user = {
+    id: userId,
+    email,
+    full_name: fullName,
+    role,
+    store_id: assignedStoreId,
+    created_at: new Date().toISOString(),
+  };
 
   if (sql) {
     try {
       await initNeonDatabase();
       await sql`
-        INSERT INTO users (id, email, password_hash, full_name)
-        VALUES (${userId}, ${email}, ${password_hash}, ${fullName})
+        INSERT INTO users (id, email, password_hash, full_name, role, store_id)
+        VALUES (${userId}, ${email}, ${password_hash}, ${fullName}, ${role}, ${assignedStoreId})
       `;
+
+      if (role === 'cashier' && assignedStoreId) {
+        const scId = crypto.randomUUID();
+        await sql`
+          INSERT INTO store_cashiers (id, store_id, cashier_id, cashier_email, cashier_name)
+          VALUES (${scId}, ${assignedStoreId}, ${userId}, ${email}, ${fullName})
+          ON CONFLICT DO NOTHING
+        `;
+      }
     } catch (err: any) {
-      console.warn('Neon DB signup fallback to local session:', err);
+      console.warn('Neon DB signup error:', err);
+      if (err.message && err.message.includes('unique constraint')) {
+        return { user: null, error: new Error('An account with this email already exists.') };
+      }
     }
   }
 
@@ -170,7 +252,7 @@ export const signInNeon = async (email: string, password_hash: string, fullName?
     try {
       await initNeonDatabase();
       const users = await sql`
-        SELECT id, email, full_name, created_at FROM users
+        SELECT id, email, full_name, role, store_id, created_at FROM users
         WHERE LOWER(email) = LOWER(${email})
         LIMIT 1
       `;
@@ -180,15 +262,22 @@ export const signInNeon = async (email: string, password_hash: string, fullName?
         return { user, error: null };
       }
 
-      // If user not found but fullName provided (e.g. Google auth), auto create user in Neon
+      // If user not found but fullName provided (e.g. Google auth), auto create user in Neon as business_owner by default
       if (fullName) {
         const newUserId = crypto.randomUUID();
         await sql`
-          INSERT INTO users (id, email, password_hash, full_name)
-          VALUES (${newUserId}, ${email}, ${password_hash}, ${fullName})
+          INSERT INTO users (id, email, password_hash, full_name, role)
+          VALUES (${newUserId}, ${email}, ${password_hash}, ${fullName}, 'business_owner')
           ON CONFLICT (email) DO NOTHING
         `;
-        const newUser = { id: newUserId, email, full_name: fullName, created_at: new Date().toISOString() };
+        const newUser = {
+          id: newUserId,
+          email,
+          full_name: fullName,
+          role: 'business_owner',
+          store_id: null,
+          created_at: new Date().toISOString(),
+        };
         localStorage.setItem('mystore_user', JSON.stringify(newUser));
         return { user: newUser, error: null };
       }
@@ -199,9 +288,118 @@ export const signInNeon = async (email: string, password_hash: string, fullName?
 
   // Fallback / mock user for offline
   const userId = crypto.randomUUID();
-  const user = { id: userId, email, full_name: fullName || email.split('@')[0], created_at: new Date().toISOString() };
+  const user = {
+    id: userId,
+    email,
+    full_name: fullName || email.split('@')[0],
+    role: 'business_owner',
+    created_at: new Date().toISOString(),
+  };
   localStorage.setItem('mystore_user', JSON.stringify(user));
   return { user, error: null };
+};
+
+export const joinBranchWithCodeNeon = async (userId: string, accessCode: string) => {
+  const sql = getNeonSql();
+  if (!sql) return { success: false, error: 'Database connection offline' };
+
+  try {
+    await initNeonDatabase();
+    const stores = await sql`
+      SELECT id, name, location FROM stores
+      WHERE LOWER(access_code) = LOWER(${accessCode.trim()})
+      LIMIT 1
+    `;
+
+    if (!stores || stores.length === 0) {
+      return { success: false, error: 'Invalid Branch Access Code' };
+    }
+
+    const store = stores[0];
+    const currentUser = getCurrentUserNeon();
+
+    await sql`
+      UPDATE users
+      SET role = 'cashier', store_id = ${store.id}
+      WHERE id = ${userId}
+    `;
+
+    const scId = crypto.randomUUID();
+    await sql`
+      INSERT INTO store_cashiers (id, store_id, cashier_id, cashier_email, cashier_name)
+      VALUES (${scId}, ${store.id}, ${userId}, ${currentUser?.email || ''}, ${currentUser?.full_name || 'Cashier'})
+      ON CONFLICT DO NOTHING
+    `;
+
+    const updatedUser = { ...currentUser, role: 'cashier', store_id: store.id };
+    localStorage.setItem('mystore_user', JSON.stringify(updatedUser));
+
+    return { success: true, store };
+  } catch (err: any) {
+    return { success: false, error: err.message };
+  }
+};
+
+export const getStoreCashiersNeon = async (storeId: string) => {
+  const sql = getNeonSql();
+  if (!sql) return [];
+
+  try {
+    const cashiers = await sql`
+      SELECT u.id, u.email, u.full_name, u.created_at
+      FROM users u
+      LEFT JOIN store_cashiers sc ON sc.cashier_id = u.id
+      WHERE u.store_id = ${storeId} OR sc.store_id = ${storeId}
+    `;
+    return cashiers || [];
+  } catch (err) {
+    console.error('Error fetching store cashiers:', err);
+    return [];
+  }
+};
+
+export const removeCashierFromStoreNeon = async (cashierId: string) => {
+  const sql = getNeonSql();
+  if (!sql) return { success: false };
+
+  try {
+    await sql`UPDATE users SET store_id = NULL WHERE id = ${cashierId}`;
+    await sql`DELETE FROM store_cashiers WHERE cashier_id = ${cashierId}`;
+    return { success: true };
+  } catch (err: any) {
+    console.error('Error removing cashier:', err);
+    return { success: false, error: err.message };
+  }
+};
+
+export const deleteStoreBranchNeon = async (storeId: string, ownerId: string) => {
+  const sql = getNeonSql();
+  if (!sql) return { success: false };
+
+  try {
+    await sql`DELETE FROM stores WHERE id = ${storeId} AND owner_id = ${ownerId}`;
+    await sql`UPDATE users SET store_id = NULL WHERE store_id = ${storeId}`;
+    return { success: true };
+  } catch (err: any) {
+    console.error('Error deleting store branch:', err);
+    return { success: false, error: err.message };
+  }
+};
+
+export const deleteUserAccountNeon = async (userId: string) => {
+  const sql = getNeonSql();
+  try {
+    if (sql) {
+      await sql`DELETE FROM store_cashiers WHERE cashier_id = ${userId}`;
+      await sql`UPDATE stores SET owner_id = NULL WHERE owner_id = ${userId}`;
+      await sql`DELETE FROM users WHERE id = ${userId}`;
+    }
+  } catch (err) {
+    console.error('Error deleting user account from Neon:', err);
+  } finally {
+    localStorage.removeItem('mystore_user');
+  }
+  return { success: true };
 };
 
 export const signOutNeon = async () => {
@@ -284,4 +482,5 @@ export const saveNeonOrder = async (orderPayload: {
     return null;
   }
 };
+
 

@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { db, LocalProduct } from '@/lib/db';
 import { getNeonSql } from '@/lib/neon';
 import { syncWithServer } from '@/lib/sync';
+import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -13,14 +14,17 @@ import { toast } from 'sonner';
 const Products = () => {
   const navigate = useNavigate();
   const { storeId } = useParams();
+  const { user } = useAuth();
   const [products, setProducts] = useState<LocalProduct[]>([]);
   const [stores, setStores] = useState<any[]>([]);
   const [activeStoreId, setActiveStoreId] = useState<string>(storeId || '');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    loadStores();
-  }, [storeId]);
+    if (user) {
+      loadStores();
+    }
+  }, [storeId, user]);
 
   useEffect(() => {
     if (activeStoreId) {
@@ -29,12 +33,25 @@ const Products = () => {
   }, [activeStoreId]);
 
   const loadStores = async () => {
+    if (!user) return;
     try {
       let storeList: any[] = [];
       const sql = getNeonSql();
       if (navigator.onLine && sql) {
         try {
-          storeList = await sql`SELECT * FROM stores ORDER BY created_at DESC`;
+          if (user.role === 'cashier') {
+            if (user.store_id) {
+              storeList = await sql`SELECT * FROM stores WHERE id = ${user.store_id}`;
+            } else {
+              storeList = await sql`
+                SELECT s.* FROM stores s
+                INNER JOIN store_cashiers sc ON sc.store_id = s.id
+                WHERE sc.cashier_id = ${user.id}
+              `;
+            }
+          } else {
+            storeList = await sql`SELECT * FROM stores WHERE owner_id = ${user.id} ORDER BY created_at DESC`;
+          }
         } catch (err) {
           console.warn('Neon stores query error:', err);
         }

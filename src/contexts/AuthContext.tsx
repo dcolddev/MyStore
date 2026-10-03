@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState } from 'react';
-import { signUpNeon, signInNeon, signOutNeon, getCurrentUserNeon } from '@/lib/neon';
+import { signUpNeon, signInNeon, signOutNeon, getCurrentUserNeon, joinBranchWithCodeNeon, deleteUserAccountNeon } from '@/lib/neon';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 
@@ -7,15 +7,25 @@ export interface User {
   id: string;
   email: string;
   full_name?: string;
+  role?: 'business_owner' | 'cashier';
+  store_id?: string | null;
   created_at?: string;
 }
 
 interface AuthContextType {
   user: User | null;
   session: any;
-  signUp: (email: string, password: string, fullName: string) => Promise<{ user: User | null; error: any }>;
+  signUp: (
+    email: string,
+    password: string,
+    fullName: string,
+    role?: 'business_owner' | 'cashier',
+    branchAccessCode?: string
+  ) => Promise<{ user: User | null; error: any }>;
   signIn: (email: string, password: string) => Promise<{ user: User | null; error: any }>;
   signInWithGoogle: () => Promise<{ user: User | null; error: any }>;
+  joinBranchWithCode: (accessCode: string) => Promise<{ success: boolean; error?: string }>;
+  deleteAccount: () => Promise<void>;
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<{ error: any }>;
   updatePassword: (newPassword: string) => Promise<{ error: any }>;
@@ -59,8 +69,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     setLoading(false);
   }, []);
 
-  const signUp = async (email: string, password: string, fullName: string) => {
-    const res = await signUpNeon(email, password, fullName);
+  const signUp = async (
+    email: string,
+    password: string,
+    fullName: string,
+    role: 'business_owner' | 'cashier' = 'business_owner',
+    branchAccessCode?: string
+  ) => {
+    const res = await signUpNeon(email, password, fullName, role, branchAccessCode);
     if (res.user) {
       setUser(res.user);
     }
@@ -73,6 +89,24 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setUser(res.user);
     }
     return res;
+  };
+
+  const joinBranchWithCode = async (accessCode: string) => {
+    if (!user) return { success: false, error: 'Not logged in' };
+    const res = await joinBranchWithCodeNeon(user.id, accessCode);
+    if (res.success) {
+      const updated = getCurrentUserNeon();
+      if (updated) setUser(updated);
+    }
+    return res;
+  };
+
+  const deleteAccount = async () => {
+    if (!user) return;
+    await deleteUserAccountNeon(user.id);
+    setUser(null);
+    toast.success('Your account has been deleted.');
+    navigate('/auth');
   };
 
   const signInWithGoogle = async (): Promise<{ user: User | null; error: any }> => {
@@ -139,7 +173,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, session: user ? { user } : null, signUp, signIn, signInWithGoogle, signOut, resetPassword, updatePassword, loading }}>
+    <AuthContext.Provider value={{ user, session: user ? { user } : null, signUp, signIn, signInWithGoogle, joinBranchWithCode, deleteAccount, signOut, resetPassword, updatePassword, loading }}>
       {children}
     </AuthContext.Provider>
   );
@@ -152,4 +186,5 @@ export const useAuth = () => {
   }
   return context;
 };
+
 

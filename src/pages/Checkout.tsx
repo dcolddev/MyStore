@@ -69,12 +69,25 @@ export default function Checkout() {
   }, [routeStoreId]);
 
   const loadStoresAndProducts = async () => {
+    if (!user) return;
     try {
       let storeList: any[] = [];
       const sql = getNeonSql();
       if (navigator.onLine && sql) {
         try {
-          storeList = await sql`SELECT * FROM stores ORDER BY created_at DESC`;
+          if (user.role === 'cashier') {
+            if (user.store_id) {
+              storeList = await sql`SELECT * FROM stores WHERE id = ${user.store_id}`;
+            } else {
+              storeList = await sql`
+                SELECT s.* FROM stores s
+                INNER JOIN store_cashiers sc ON sc.store_id = s.id
+                WHERE sc.cashier_id = ${user.id}
+              `;
+            }
+          } else {
+            storeList = await sql`SELECT * FROM stores WHERE owner_id = ${user.id} ORDER BY created_at DESC`;
+          }
         } catch (err) {
           console.warn('Neon stores query notice:', err);
         }

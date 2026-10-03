@@ -6,6 +6,7 @@ export interface LocalStore {
   owner_id: string;
   name: string;
   location?: string;
+  access_code?: string;
   created_at: string;
   updated_at: string;
   synced: boolean;

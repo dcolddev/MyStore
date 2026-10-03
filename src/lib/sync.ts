@@ -1,7 +1,7 @@
-import { getNeonSql, initNeonDatabase } from './neon';
+import { getNeonSql, initNeonDatabase, getCurrentUserNeon } from './neon';
 import { db } from './db';
 
-export const hydrateLocalDatabase = async () => {
+export const hydrateLocalDatabase = async (userParam?: any) => {
   if (typeof window === 'undefined' || !navigator.onLine) return;
 
   const sql = getNeonSql();
@@ -9,13 +9,51 @@ export const hydrateLocalDatabase = async () => {
 
   try {
     await initNeonDatabase();
+    const user = userParam || getCurrentUserNeon();
+    if (!user || !user.id) return;
 
-    const stores = await sql`SELECT * FROM stores ORDER BY created_at DESC`;
-    if (stores && stores.length > 0) {
+    let stores: any[] = [];
+
+    if (user.role === 'cashier') {
+      if (user.store_id) {
+        stores = await sql`SELECT * FROM stores WHERE id = ${user.store_id}`;
+      } else {
+        stores = await sql`
+          SELECT s.* FROM stores s
+          INNER JOIN store_cashiers sc ON sc.store_id = s.id
+          WHERE sc.cashier_id = ${user.id}
+        `;
+      }
+    } else {
+      // Business Owner: fetch all owned stores
+      stores = await sql`SELECT * FROM stores WHERE owner_id = ${user.id} ORDER BY created_at DESC`;
+    }
+
+    if (!stores) stores = [];
+
+    const accessibleStoreIds = stores.map((s: any) => s.id);
+
+    // Save accessible stores locally
+    await db.stores.clear();
+    if (stores.length > 0) {
       await db.stores.bulkPut(stores.map((s: any) => ({ ...s, synced: true })));
     }
 
-    const products = await sql`SELECT * FROM products ORDER BY created_at DESC`;
+    if (accessibleStoreIds.length === 0) {
+      await db.products.clear();
+      await db.sales.clear();
+      await db.expenses.clear();
+      await db.debts.clear();
+      return;
+    }
+
+    // Fetch Products for accessible stores
+    const products = await sql`
+      SELECT * FROM products
+      WHERE store_id = ANY(${accessibleStoreIds})
+      ORDER BY created_at DESC
+    `;
+    await db.products.clear();
     if (products && products.length > 0) {
       await db.products.bulkPut(
         products.map((p: any) => ({
@@ -28,7 +66,13 @@ export const hydrateLocalDatabase = async () => {
       );
     }
 
-    const sales = await sql`SELECT * FROM sales ORDER BY sale_date DESC`;
+    // Fetch Sales for accessible stores
+    const sales = await sql`
+      SELECT * FROM sales
+      WHERE store_id = ANY(${accessibleStoreIds})
+      ORDER BY sale_date DESC
+    `;
+    await db.sales.clear();
     if (sales && sales.length > 0) {
       await db.sales.bulkPut(
         sales.map((s: any) => ({
@@ -41,7 +85,13 @@ export const hydrateLocalDatabase = async () => {
       );
     }
 
-    const expenses = await sql`SELECT * FROM expenses ORDER BY expense_date DESC`;
+    // Fetch Expenses for accessible stores
+    const expenses = await sql`
+      SELECT * FROM expenses
+      WHERE store_id = ANY(${accessibleStoreIds})
+      ORDER BY expense_date DESC
+    `;
+    await db.expenses.clear();
     if (expenses && expenses.length > 0) {
       await db.expenses.bulkPut(
         expenses.map((e: any) => ({
@@ -52,7 +102,13 @@ export const hydrateLocalDatabase = async () => {
       );
     }
 
-    const debts = await sql`SELECT * FROM customer_debts ORDER BY created_at DESC`;
+    // Fetch Debts for accessible stores
+    const debts = await sql`
+      SELECT * FROM customer_debts
+      WHERE store_id = ANY(${accessibleStoreIds})
+      ORDER BY created_at DESC
+    `;
+    await db.debts.clear();
     if (debts && debts.length > 0) {
       await db.debts.bulkPut(
         debts.map((d: any) => ({
@@ -67,16 +123,17 @@ export const hydrateLocalDatabase = async () => {
   }
 };
 
-export const syncWithServer = async () => {
+export const syncWithServer = async (userParam?: any) => {
   const sql = getNeonSql();
   if (!sql) return { success: false, synced: 0 };
 
   try {
     await initNeonDatabase();
+    const user = userParam || getCurrentUserNeon();
     const operations = await db.syncQueue.toArray();
     
     if (operations.length === 0) {
-      await hydrateLocalDatabase();
+      await hydrateLocalDatabase(user);
       return { success: true, synced: 0 };
     }
 
@@ -90,8 +147,8 @@ export const syncWithServer = async () => {
         if (op.operation === 'create') {
           if (op.table === 'stores') {
             await sql`
-              INSERT INTO stores (id, owner_id, name, location)
-              VALUES (${payload.id}, ${payload.owner_id}, ${payload.name}, ${payload.location || null})
+              INSERT INTO stores (id, owner_id, name, location, access_code)
+              VALUES (${payload.id}, ${payload.owner_id}, ${payload.name}, ${payload.location || null}, ${payload.access_code || null})
               ON CONFLICT (id) DO NOTHING
             `;
           } else if (op.table === 'products') {
@@ -158,7 +215,7 @@ export const syncWithServer = async () => {
       }
     }
 
-    await hydrateLocalDatabase();
+    await hydrateLocalDatabase(user);
     return { success: true, synced: operations.length };
   } catch (error) {
     console.error('Neon Sync error:', error);
@@ -173,6 +230,7 @@ if (typeof window !== 'undefined') {
     syncWithServer();
   });
 }
+
 
 
 
