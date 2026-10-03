@@ -68,7 +68,7 @@ interface CashierRecord {
 }
 
 const Dashboard = () => {
-  const { user, signOut, joinBranchWithCode, deleteAccount, loading: authLoading } = useAuth();
+  const { user, signOut, joinBranchWithCode, updateUserRole, deleteAccount, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const { storeId } = useParams();
 
@@ -85,6 +85,11 @@ const Dashboard = () => {
   const [cashiers, setCashiers] = useState<CashierRecord[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Pending Role Selection Modal (Google Auth)
+  const [pendingRole, setPendingRole] = useState<'business_owner' | 'cashier'>('business_owner');
+  const [pendingBranchCode, setPendingBranchCode] = useState('');
+  const [updatingRole, setUpdatingRole] = useState(false);
+
   // Cashier Branch Join Modal
   const [isJoinBranchOpen, setIsJoinBranchOpen] = useState(false);
   const [joinCodeInput, setJoinCodeInput] = useState('');
@@ -98,6 +103,24 @@ const Dashboard = () => {
       navigate('/auth');
     }
   }, [user, authLoading, navigate]);
+
+  const handlePendingRoleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (pendingRole === 'cashier' && !pendingBranchCode.trim()) {
+      toast.error('Branch Access Code is required for cashiers.');
+      return;
+    }
+    setUpdatingRole(true);
+    const res = await updateUserRole(pendingRole, pendingBranchCode.trim());
+    setUpdatingRole(false);
+
+    if (res.success) {
+      toast.success(pendingRole === 'cashier' ? 'Connected to store branch as Cashier!' : 'Account setup complete as Business Owner!');
+      loadStores();
+    } else {
+      toast.error(res.error || 'Failed to complete role setup');
+    }
+  };
 
   const loadStores = useCallback(async () => {
     if (!user) return;
@@ -955,6 +978,74 @@ const Dashboard = () => {
             </div>
             <Button type="submit" className="w-full font-bold" disabled={joiningBranch}>
               {joiningBranch ? 'Connecting...' : 'Join Store Branch'}
+            </Button>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Mandatory Google Auth Pending Role Setup Modal */}
+      <Dialog open={Boolean(user && (!user.role || user.role === 'pending'))}>
+        <DialogContent className="max-w-md">
+          <DialogHeader className="text-center space-y-1">
+            <DialogTitle className="text-xl font-bold">Complete Your Account Setup</DialogTitle>
+            <DialogDescription>
+              Please choose your account type to proceed to your dashboard.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handlePendingRoleSubmit} className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label>Select Account Type</Label>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setPendingRole('business_owner')}
+                  className={`p-3.5 rounded-xl border flex flex-col items-center gap-1.5 text-xs font-bold transition-all ${
+                    pendingRole === 'business_owner'
+                      ? 'border-primary bg-primary/10 text-primary shadow-sm'
+                      : 'border-border text-muted-foreground hover:bg-muted/50'
+                  }`}
+                >
+                  <Building2 className="h-6 w-6" />
+                  <span>Business Owner</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPendingRole('cashier')}
+                  className={`p-3.5 rounded-xl border flex flex-col items-center gap-1.5 text-xs font-bold transition-all ${
+                    pendingRole === 'cashier'
+                      ? 'border-primary bg-primary/10 text-primary shadow-sm'
+                      : 'border-border text-muted-foreground hover:bg-muted/50'
+                  }`}
+                >
+                  <UserCheck className="h-6 w-6" />
+                  <span>Store Cashier</span>
+                </button>
+              </div>
+            </div>
+
+            {pendingRole === 'cashier' && (
+              <div className="space-y-2 p-3 bg-muted/40 rounded-xl border border-primary/20">
+                <Label htmlFor="pendingCode" className="flex items-center gap-1.5 text-xs font-bold text-primary">
+                  <KeyRound className="h-3.5 w-3.5" />
+                  Branch Access Code (Provided by Owner)
+                </Label>
+                <Input
+                  id="pendingCode"
+                  type="text"
+                  placeholder="e.g. BR-8X92K"
+                  value={pendingBranchCode}
+                  onChange={(e) => setPendingBranchCode(e.target.value.toUpperCase())}
+                  required={pendingRole === 'cashier'}
+                  className="font-mono uppercase font-bold tracking-widest text-center"
+                />
+                <p className="text-[11px] text-muted-foreground">
+                  Ask your store business owner for your branch's 5-character access code.
+                </p>
+              </div>
+            )}
+
+            <Button type="submit" className="w-full py-5 font-extrabold" disabled={updatingRole}>
+              {updatingRole ? 'Setting up account...' : 'Complete Setup & Continue'}
             </Button>
           </form>
         </DialogContent>

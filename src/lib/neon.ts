@@ -245,7 +245,13 @@ export const signUpNeon = async (
   return { user, error: null };
 };
 
-export const signInNeon = async (email: string, password_hash: string, fullName?: string) => {
+export const signInNeon = async (
+  email: string,
+  password_hash: string,
+  fullName?: string,
+  preRole?: 'business_owner' | 'cashier' | null,
+  branchAccessCode?: string
+) => {
   const sql = getNeonSql();
 
   if (sql) {
@@ -262,20 +268,46 @@ export const signInNeon = async (email: string, password_hash: string, fullName?
         return { user, error: null };
       }
 
-      // If user not found but fullName provided (e.g. Google auth), auto create user in Neon as business_owner by default
+      // If user not found but fullName provided (e.g. Google auth), create user with chosen or pending role
       if (fullName) {
         const newUserId = crypto.randomUUID();
+        let assignedRole: string = preRole || 'pending';
+        let assignedStoreId: string | null = null;
+
+        if (preRole === 'cashier' && branchAccessCode) {
+          const matchedStores = await sql`
+            SELECT id FROM stores
+            WHERE LOWER(access_code) = LOWER(${branchAccessCode.trim()})
+            LIMIT 1
+          `;
+          if (matchedStores && matchedStores.length > 0) {
+            assignedStoreId = matchedStores[0].id;
+          } else {
+            assignedRole = 'pending';
+          }
+        }
+
         await sql`
-          INSERT INTO users (id, email, password_hash, full_name, role)
-          VALUES (${newUserId}, ${email}, ${password_hash}, ${fullName}, 'business_owner')
+          INSERT INTO users (id, email, password_hash, full_name, role, store_id)
+          VALUES (${newUserId}, ${email}, ${password_hash}, ${fullName}, ${assignedRole}, ${assignedStoreId})
           ON CONFLICT (email) DO NOTHING
         `;
+
+        if (assignedRole === 'cashier' && assignedStoreId) {
+          const scId = crypto.randomUUID();
+          await sql`
+            INSERT INTO store_cashiers (id, store_id, cashier_id, cashier_email, cashier_name)
+            VALUES (${scId}, ${assignedStoreId}, ${newUserId}, ${email}, ${fullName})
+            ON CONFLICT DO NOTHING
+          `;
+        }
+
         const newUser = {
           id: newUserId,
           email,
           full_name: fullName,
-          role: 'business_owner',
-          store_id: null,
+          role: assignedRole,
+          store_id: assignedStoreId,
           created_at: new Date().toISOString(),
         };
         localStorage.setItem('mystore_user', JSON.stringify(newUser));
@@ -292,11 +324,73 @@ export const signInNeon = async (email: string, password_hash: string, fullName?
     id: userId,
     email,
     full_name: fullName || email.split('@')[0],
-    role: 'business_owner',
+    role: preRole || 'pending',
     created_at: new Date().toISOString(),
   };
   localStorage.setItem('mystore_user', JSON.stringify(user));
   return { user, error: null };
+};
+
+export const updateUserRoleNeon = async (
+  userId: string,
+  role: 'business_owner' | 'cashier',
+  branchAccessCode?: string
+) => {
+  const sql = getNeonSql();
+  const currentUser = getCurrentUserNeon();
+  let assignedStoreId: string | null = null;
+
+  if (role === 'cashier') {
+    if (!branchAccessCode || !branchAccessCode.trim()) {
+      return { success: false, error: 'Branch Access Code is required for cashier account.' };
+    }
+
+    if (sql) {
+      try {
+        await initNeonDatabase();
+        const stores = await sql`
+          SELECT id, name FROM stores
+          WHERE LOWER(access_code) = LOWER(${branchAccessCode.trim()})
+          LIMIT 1
+        `;
+        if (!stores || stores.length === 0) {
+          return { success: false, error: 'Invalid Branch Access Code. Please check with your business owner.' };
+        }
+        assignedStoreId = stores[0].id;
+      } catch (err: any) {
+        return { success: false, error: err.message };
+      }
+    }
+  }
+
+  if (sql) {
+    try {
+      await sql`
+        UPDATE users
+        SET role = ${role}, store_id = ${assignedStoreId}
+        WHERE id = ${userId}
+      `;
+
+      if (role === 'cashier' && assignedStoreId) {
+        const scId = crypto.randomUUID();
+        await sql`
+          INSERT INTO store_cashiers (id, store_id, cashier_id, cashier_email, cashier_name)
+          VALUES (${scId}, ${assignedStoreId}, ${userId}, ${currentUser?.email || ''}, ${currentUser?.full_name || 'Cashier'})
+          ON CONFLICT DO NOTHING
+        `;
+      }
+    } catch (err: any) {
+      console.error('Error updating user role in Neon:', err);
+    }
+  }
+
+  const updatedUser = {
+    ...currentUser,
+    role,
+    store_id: assignedStoreId,
+  };
+  localStorage.setItem('mystore_user', JSON.stringify(updatedUser));
+  return { success: true, user: updatedUser };
 };
 
 export const joinBranchWithCodeNeon = async (userId: string, accessCode: string) => {

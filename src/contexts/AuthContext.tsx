@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState } from 'react';
-import { signUpNeon, signInNeon, signOutNeon, getCurrentUserNeon, joinBranchWithCodeNeon, deleteUserAccountNeon } from '@/lib/neon';
+import { signUpNeon, signInNeon, signOutNeon, getCurrentUserNeon, joinBranchWithCodeNeon, deleteUserAccountNeon, updateUserRoleNeon } from '@/lib/neon';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 
@@ -7,7 +7,7 @@ export interface User {
   id: string;
   email: string;
   full_name?: string;
-  role?: 'business_owner' | 'cashier';
+  role?: 'business_owner' | 'cashier' | 'pending';
   store_id?: string | null;
   created_at?: string;
 }
@@ -23,8 +23,15 @@ interface AuthContextType {
     branchAccessCode?: string
   ) => Promise<{ user: User | null; error: any }>;
   signIn: (email: string, password: string) => Promise<{ user: User | null; error: any }>;
-  signInWithGoogle: () => Promise<{ user: User | null; error: any }>;
+  signInWithGoogle: (
+    preRole?: 'business_owner' | 'cashier',
+    branchAccessCode?: string
+  ) => Promise<{ user: User | null; error: any }>;
   joinBranchWithCode: (accessCode: string) => Promise<{ success: boolean; error?: string }>;
+  updateUserRole: (
+    role: 'business_owner' | 'cashier',
+    branchAccessCode?: string
+  ) => Promise<{ success: boolean; error?: string }>;
   deleteAccount: () => Promise<void>;
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<{ error: any }>;
@@ -52,13 +59,25 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       const accessToken = params.get('access_token');
       if (accessToken) {
         window.history.replaceState(null, '', window.location.pathname);
+
+        const storedRole = (sessionStorage.getItem('google_auth_pre_role') as 'business_owner' | 'cashier') || undefined;
+        const storedCode = sessionStorage.getItem('google_auth_branch_code') || undefined;
+        sessionStorage.removeItem('google_auth_pre_role');
+        sessionStorage.removeItem('google_auth_branch_code');
+
         fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
           headers: { Authorization: `Bearer ${accessToken}` },
         })
           .then((res) => res.json())
           .then(async (googleUser) => {
             if (googleUser?.email) {
-              const res = await signInNeon(googleUser.email, 'google-oauth', googleUser.name || googleUser.email.split('@')[0]);
+              const res = await signInNeon(
+                googleUser.email,
+                'google-oauth',
+                googleUser.name || googleUser.email.split('@')[0],
+                storedRole,
+                storedCode
+              );
               if (res.user) setUser(res.user);
             }
           })
@@ -101,6 +120,18 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     return res;
   };
 
+  const updateUserRole = async (
+    role: 'business_owner' | 'cashier',
+    branchAccessCode?: string
+  ) => {
+    if (!user) return { success: false, error: 'Not logged in' };
+    const res = await updateUserRoleNeon(user.id, role, branchAccessCode);
+    if (res.success && res.user) {
+      setUser(res.user as User);
+    }
+    return res;
+  };
+
   const deleteAccount = async () => {
     if (!user) return;
     await deleteUserAccountNeon(user.id);
@@ -109,8 +140,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     navigate('/auth');
   };
 
-  const signInWithGoogle = async (): Promise<{ user: User | null; error: any }> => {
+  const signInWithGoogle = async (
+    preRole?: 'business_owner' | 'cashier',
+    branchAccessCode?: string
+  ): Promise<{ user: User | null; error: any }> => {
     const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || '512366342113-fh3j1ehrdhohhp8udieggj707hhlp078.apps.googleusercontent.com';
+
+    if (preRole) sessionStorage.setItem('google_auth_pre_role', preRole);
+    if (branchAccessCode) sessionStorage.setItem('google_auth_branch_code', branchAccessCode);
 
     return new Promise((resolve) => {
       // 1. Try Google Identity Services Token Client Popup first
@@ -127,7 +164,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                   });
                   const googleUser = await userInfoRes.json();
                   if (googleUser?.email) {
-                    const res = await signInNeon(googleUser.email, 'google-oauth', googleUser.name || googleUser.email.split('@')[0]);
+                    const res = await signInNeon(
+                      googleUser.email,
+                      'google-oauth',
+                      googleUser.name || googleUser.email.split('@')[0],
+                      preRole,
+                      branchAccessCode
+                    );
                     if (res.user) {
                       setUser(res.user);
                       resolve({ user: res.user, error: null });

@@ -27,8 +27,12 @@ const Auth = () => {
 
   const handleGoogleSignIn = async () => {
     try {
+      if (role === 'cashier' && !branchCode.trim()) {
+        toast.error('Please enter your Branch Access Code before continuing with Google.');
+        return;
+      }
       setLoading(true);
-      const { user, error } = await signInWithGoogle();
+      const { user, error } = await signInWithGoogle(role, branchCode);
       if (error) {
         toast.error(error.message || 'Google Auth failed.');
       } else if (user) {
@@ -96,15 +100,67 @@ const Auth = () => {
           <CardDescription>
             {isLogin
               ? 'Sign in to manage your stores and branches'
-              : 'Sign up as a Business Owner or Cashier'}
+              : 'Sign up as a Business Owner or Store Cashier'}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+          {/* Role Selector applied to both Google and Email */}
+          <div className="space-y-2">
+            <Label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Account Role</Label>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => setRole('business_owner')}
+                className={`p-3 rounded-lg border flex flex-col items-center gap-1.5 text-xs font-semibold transition-all ${
+                  role === 'business_owner'
+                    ? 'border-primary bg-primary/10 text-primary shadow-sm'
+                    : 'border-border text-muted-foreground hover:bg-muted/50'
+                }`}
+              >
+                <Building2 className="h-5 w-5" />
+                <span>Business Owner</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setRole('cashier')}
+                className={`p-3 rounded-lg border flex flex-col items-center gap-1.5 text-xs font-semibold transition-all ${
+                  role === 'cashier'
+                    ? 'border-primary bg-primary/10 text-primary shadow-sm'
+                    : 'border-border text-muted-foreground hover:bg-muted/50'
+                }`}
+              >
+                <UserCheck className="h-5 w-5" />
+                <span>Store Cashier</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Branch Access Code Input when Cashier is selected */}
+          {role === 'cashier' && (
+            <div className="space-y-2 p-3 bg-muted/40 rounded-xl border border-primary/20">
+              <Label htmlFor="branchCode" className="flex items-center gap-1.5 text-xs font-bold text-primary">
+                <KeyRound className="h-3.5 w-3.5" />
+                Branch Access Code (Provided by Owner)
+              </Label>
+              <Input
+                id="branchCode"
+                type="text"
+                placeholder="e.g. BR-8X92K"
+                value={branchCode}
+                onChange={(e) => setBranchCode(e.target.value.toUpperCase())}
+                className="font-mono uppercase font-bold tracking-wider"
+              />
+              <p className="text-[11px] text-muted-foreground">
+                Enter your store branch access code before signing in with Google or Email.
+              </p>
+            </div>
+          )}
+
           <Button
             type="button"
             variant="outline"
             onClick={handleGoogleSignIn}
-            className="w-full flex items-center justify-center gap-2 border-input py-5 hover:bg-muted/50"
+            className="w-full flex items-center justify-center gap-2 border-input py-5 hover:bg-muted/50 font-bold"
             disabled={loading}
           >
             <svg className="h-5 w-5" viewBox="0 0 24 24">
@@ -125,7 +181,7 @@ const Auth = () => {
                 d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
               />
             </svg>
-            <span>Continue with Google</span>
+            <span>Continue with Google as {role === 'cashier' ? 'Cashier' : 'Owner'}</span>
           </Button>
 
           <div className="relative my-4">
