@@ -220,6 +220,15 @@ export const signUpNeon = async (
   if (sql) {
     try {
       await initNeonDatabase();
+
+      // Check if email already exists
+      const existingUser = await sql`
+        SELECT id FROM users WHERE LOWER(email) = LOWER(${email}) LIMIT 1
+      `;
+      if (existingUser && existingUser.length > 0) {
+        return { user: null, error: new Error('An account with this email already exists.') };
+      }
+
       await sql`
         INSERT INTO users (id, email, password_hash, full_name, role, store_id)
         VALUES (${userId}, ${email}, ${password_hash}, ${fullName}, ${role}, ${assignedStoreId})
@@ -233,16 +242,19 @@ export const signUpNeon = async (
           ON CONFLICT DO NOTHING
         `;
       }
+
+      localStorage.setItem('mystore_user', JSON.stringify(user));
+      return { user, error: null };
     } catch (err: any) {
-      console.warn('Neon DB signup error:', err);
-      if (err.message && err.message.includes('unique constraint')) {
+      console.error('Neon DB signup error:', err);
+      if (err.message && (err.message.includes('unique') || err.message.includes('duplicate'))) {
         return { user: null, error: new Error('An account with this email already exists.') };
       }
+      return { user: null, error: new Error('Sign up failed. Please check your connection and try again.') };
     }
   }
 
-  localStorage.setItem('mystore_user', JSON.stringify(user));
-  return { user, error: null };
+  return { user: null, error: new Error('Database is unavailable. Please try again later.') };
 };
 
 export const signInNeon = async (
@@ -257,18 +269,32 @@ export const signInNeon = async (
   if (sql) {
     try {
       await initNeonDatabase();
+
+      // Verify both email AND password hash together
       const users = await sql`
         SELECT id, email, full_name, role, store_id, created_at FROM users
         WHERE LOWER(email) = LOWER(${email})
+          AND password_hash = ${password_hash}
         LIMIT 1
       `;
+
       if (users && users.length > 0) {
         const user = users[0];
         localStorage.setItem('mystore_user', JSON.stringify(user));
         return { user, error: null };
       }
 
-      // If user not found but fullName provided (e.g. Google auth), create user with chosen or pending role
+      // Check if the email exists at all — to return the right error message
+      const emailExists = await sql`
+        SELECT id FROM users WHERE LOWER(email) = LOWER(${email}) LIMIT 1
+      `;
+
+      if (emailExists && emailExists.length > 0) {
+        // Email found but password wrong
+        return { user: null, error: new Error('Incorrect password. Please try again.') };
+      }
+
+      // If user not found but fullName provided (Google auth path), create user with chosen or pending role
       if (fullName) {
         const newUserId = crypto.randomUUID();
         let assignedRole: string = preRole || 'pending';
@@ -313,22 +339,18 @@ export const signInNeon = async (
         localStorage.setItem('mystore_user', JSON.stringify(newUser));
         return { user: newUser, error: null };
       }
+
+      // No account found with this email (manual login path — do NOT auto-create)
+      return { user: null, error: new Error('No account found with this email. Please sign up first.') };
+
     } catch (err: any) {
-      console.warn('Neon DB signin check notice:', err);
+      console.warn('Neon DB signin error:', err);
+      return { user: null, error: new Error('Sign in failed. Please check your connection and try again.') };
     }
   }
 
-  // Fallback / mock user for offline
-  const userId = crypto.randomUUID();
-  const user = {
-    id: userId,
-    email,
-    full_name: fullName || email.split('@')[0],
-    role: preRole || 'pending',
-    created_at: new Date().toISOString(),
-  };
-  localStorage.setItem('mystore_user', JSON.stringify(user));
-  return { user, error: null };
+  // DB not configured — refuse sign-in rather than creating a ghost session
+  return { user: null, error: new Error('Database is unavailable. Please try again later.') };
 };
 
 export const updateUserRoleNeon = async (
