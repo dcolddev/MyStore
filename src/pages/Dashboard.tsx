@@ -258,6 +258,27 @@ const Dashboard = () => {
       </header>
 
       <div className="container mx-auto p-4">
+        {/* POS Counter Hero Banner */}
+        <div className="mb-6 p-6 rounded-2xl bg-gradient-to-r from-blue-600 via-indigo-600 to-emerald-600 text-white shadow-xl flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="space-y-1 text-center sm:text-left">
+            <h2 className="text-2xl font-black tracking-tight flex items-center justify-center sm:justify-start gap-2">
+              <ShoppingCart className="h-6 w-6" />
+              Supermarket POS Counter
+            </h2>
+            <p className="text-xs text-blue-100 font-medium">
+              Checkout customers, select payment method (Cash/Card), calculate change, and print receipts.
+            </p>
+          </div>
+          <Button
+            onClick={() => navigate(selectedStore ? `/stores/${selectedStore.id}/checkout` : '/checkout')}
+            size="lg"
+            className="bg-white text-blue-600 hover:bg-slate-100 font-black shadow-lg gap-2 text-base px-6 py-6"
+          >
+            <ShoppingCart className="h-5 w-5" />
+            <span>OPEN POS COUNTER</span>
+          </Button>
+        </div>
+
         <div className="mb-6 grid grid-cols-2 gap-4">
           <Card>
             <CardHeader className="pb-2">
@@ -354,11 +375,11 @@ const Dashboard = () => {
               <span className="text-sm">Products</span>
             </Button>
             <Button
-              onClick={() => navigate(`/stores/${selectedStore.id}/sales/new`)}
-              className="h-20 flex-col gap-2"
+              onClick={() => navigate(`/stores/${selectedStore.id}/checkout`)}
+              className="h-20 flex-col gap-2 bg-blue-600 hover:bg-blue-500 text-white font-bold"
             >
               <ShoppingCart className="h-6 w-6" />
-              <span className="text-sm">Record Sale</span>
+              <span className="text-sm">POS Counter Checkout</span>
             </Button>
             <Button
               onClick={() => navigate(`/stores/${selectedStore.id}/sales/history`)}

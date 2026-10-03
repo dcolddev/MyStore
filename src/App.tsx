@@ -39,7 +39,9 @@ const App = () => (
               <Route path="/forgot-password" element={<ForgotPassword />} />
               <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/pos" element={<Checkout />} />
               <Route path="/checkout" element={<Checkout />} />
+              <Route path="/stores/:storeId/checkout" element={<Checkout />} />
               <Route path="/order-success/:orderId" element={<OrderSuccess />} />
               <Route path="/stores/new" element={<StoreNew />} />
               <Route path="/products" element={<Products />} />
@@ -48,13 +50,13 @@ const App = () => (
               <Route path="/stores/:storeId/products" element={<Products />} />
               <Route path="/stores/:storeId/products/new" element={<ProductNew />} />
               <Route path="/stores/:storeId/products/:productId/restock" element={<ProductRestock />} />
-              <Route path="/stores/:storeId/sales/new" element={<SaleNew />} />
+              <Route path="/stores/:storeId/sales/new" element={<Checkout />} />
               <Route path="/stores/:storeId/sales/history" element={<SalesHistory />} />
               <Route path="/stores/:storeId/expenses" element={<Expenses />} />
               <Route path="/stores/:storeId/expenses/new" element={<ExpenseNew />} />
               <Route path="/stores/:storeId/debts" element={<Debts />} />
               <Route path="/stores/:storeId/debts/new" element={<DebtNew />} />
-              <Route path="/" element={<Index />} />
+              <Route path="/" element={<Dashboard />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
