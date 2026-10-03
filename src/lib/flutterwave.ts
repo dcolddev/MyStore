@@ -38,7 +38,7 @@ export const payWithFlutterwave = async (config: FlutterwavePaymentConfig): Prom
   const loaded = await loadFlutterwaveScript();
   const publicKey = import.meta.env.VITE_FLUTTERWAVE_PUBLIC_KEY;
 
-  if (!publicKey || publicKey.includes('FLWPUBK_TEST-2b9534ac2b100415b43b3723d9d37e0c-X')) {
+  if (!publicKey) {
     throw new Error('MISSING_KEY');
   }
 
