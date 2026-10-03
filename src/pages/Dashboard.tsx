@@ -529,7 +529,7 @@ const Dashboard = () => {
         {viewMode === 'all_branches' ? (
           <div className="p-6 rounded-2xl bg-gradient-to-r from-slate-900 via-indigo-950 to-blue-900 text-white shadow-xl flex flex-col md:flex-row items-center justify-between gap-4">
             <div className="space-y-1 text-center md:text-left">
-              <Badge className="bg-amber-400 text-slate-950 font-black text-xs mb-1">GLOBAL GRAND TOTAL</Badge>
+              <Badge className="bg-primary/80 text-slate-950 font-black text-xs mb-1">GLOBAL GRAND TOTAL</Badge>
               <h2 className="text-2xl font-black tracking-tight flex items-center justify-center md:justify-start gap-2">
                 <Globe className="h-6 w-6 text-blue-400" />
                 Business Owner Aggregated Dashboard
@@ -554,7 +554,7 @@ const Dashboard = () => {
             </div>
           </div>
         ) : (
-          <div className="p-6 rounded-2xl bg-gradient-to-r from-blue-600 via-indigo-600 to-emerald-600 text-white shadow-xl flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="p-6 rounded-2xl bg-gradient-to-r from-blue-600 via-indigo-600 to-primary text-white shadow-xl flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="space-y-1 text-center sm:text-left">
               <div className="flex items-center justify-center sm:justify-start gap-2">
                 <h2 className="text-2xl font-black tracking-tight flex items-center gap-2">
@@ -645,12 +645,12 @@ const Dashboard = () => {
           <Card className="border-border/80 shadow-sm">
             <CardHeader className="pb-2">
               <CardTitle className="flex items-center gap-2 text-xs uppercase font-bold text-muted-foreground">
-                <AlertCircle className="h-4 w-4 text-amber-500" />
+                <AlertCircle className="h-4 w-4 text-primary" />
                 Low Stock
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-extrabold text-amber-500">
+              <div className="text-2xl font-extrabold text-primary">
                 {stats.lowStockCount}
               </div>
               <p className="text-xs text-muted-foreground">Items needing restock</p>
@@ -808,9 +808,9 @@ const Dashboard = () => {
                 <Button
                   onClick={() => navigate(`/stores/${selectedStore.id}/debts`)}
                   variant="outline"
-                  className="h-20 flex-col gap-1.5 border-border hover:border-amber-500/40"
+                  className="h-20 flex-col gap-1.5 border-border hover:border-primary/40"
                 >
-                  <TrendingUp className="h-6 w-6 text-amber-500" />
+                  <TrendingUp className="h-6 w-6 text-primary" />
                   <span className="text-xs font-bold">Debts</span>
                 </Button>
               </div>

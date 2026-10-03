@@ -237,7 +237,7 @@ export default function CustomerCheckout() {
           </Button>
 
           <div className="flex items-center gap-2">
-            <ShieldCheck className="h-5 w-5 text-amber-500" />
+            <ShieldCheck className="h-5 w-5 text-primary" />
             <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
               Flutterwave 256-Bit Encrypted Checkout
             </span>
@@ -358,7 +358,7 @@ export default function CustomerCheckout() {
             <Card className="shadow-md border-border/70">
               <CardHeader className="p-5 pb-3 border-b bg-muted/20">
                 <CardTitle className="text-base font-bold flex items-center gap-2">
-                  <Lock className="h-5 w-5 text-amber-500" />
+                  <Lock className="h-5 w-5 text-primary" />
                   Step 2: Select Payment Method
                 </CardTitle>
                 <CardDescription className="text-xs">
@@ -369,7 +369,7 @@ export default function CustomerCheckout() {
                 <Tabs value={paymentMethod} onValueChange={(v: any) => setPaymentMethod(v)} className="space-y-4">
                   <TabsList className="grid grid-cols-2 sm:grid-cols-4 h-auto p-1 bg-muted">
                     <TabsTrigger value="flutterwave" className="py-2.5 text-xs font-bold gap-1.5">
-                      <Zap className="h-3.5 w-3.5 text-amber-500" />
+                      <Zap className="h-3.5 w-3.5 text-primary" />
                       Flutterwave
                     </TabsTrigger>
                     <TabsTrigger value="card" className="py-2.5 text-xs font-bold gap-1.5">
@@ -388,12 +388,12 @@ export default function CustomerCheckout() {
 
                   {/* Flutterwave Content */}
                   <TabsContent value="flutterwave" className="space-y-3 pt-2">
-                    <div className="p-4 rounded-xl bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-orange-500/10 border border-amber-500/30 text-xs space-y-2">
+                    <div className="p-4 rounded-xl bg-gradient-to-r from-primary/10 via-primary/5 to-primary/10 border border-primary/30 text-xs space-y-2">
                       <div className="flex items-center justify-between">
-                        <span className="font-extrabold text-amber-600 text-sm flex items-center gap-2">
+                        <span className="font-extrabold text-primary text-sm flex items-center gap-2">
                           <CheckCircle2 className="h-4 w-4" /> Flutterwave Payment Gateway
                         </span>
-                        <Badge className="bg-amber-600 text-white font-bold text-[10px]">Instant Authorization</Badge>
+                        <Badge className="bg-primary text-white font-bold text-[10px]">Instant Authorization</Badge>
                       </div>
                       <p className="text-muted-foreground">
                         Supports Debit/Credit Cards, Bank Transfer, USSD (*737#, *901#), Mobile Money, M-Pesa, and Barter.
@@ -432,8 +432,8 @@ export default function CustomerCheckout() {
 
                   {/* Pay on Delivery Content */}
                   <TabsContent value="cod" className="space-y-3 pt-2">
-                    <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs space-y-1">
-                      <p className="font-bold text-amber-600 text-sm">Cash or POS on Delivery</p>
+                    <div className="p-4 rounded-xl bg-primary/10 border border-primary/20 text-xs space-y-1">
+                      <p className="font-bold text-primary text-sm">Cash or POS on Delivery</p>
                       <p className="text-muted-foreground">
                         Pay with Cash or POS terminal when your order arrives at your doorstep.
                       </p>
@@ -535,7 +535,7 @@ export default function CustomerCheckout() {
                 <Button
                   type="submit"
                   disabled={loading}
-                  className="w-full py-7 text-base font-extrabold tracking-wide gap-2 bg-gradient-to-r from-amber-500 via-orange-600 to-emerald-600 text-white shadow-xl rounded-xl"
+                  className="w-full py-7 text-base font-extrabold tracking-wide gap-2 bg-gradient-to-r from-primary via-primary/80 to-primary text-white shadow-xl rounded-xl"
                 >
                   {loading ? (
                     'Processing Order...'

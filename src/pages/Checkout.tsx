@@ -370,7 +370,7 @@ export default function Checkout() {
 
           <div className="flex items-center gap-3">
             <div className="hidden md:flex items-center gap-2 text-xs font-medium text-slate-400 bg-slate-800/80 px-3 py-1.5 rounded-full border border-slate-700/60">
-              <Sparkles className="h-3.5 w-3.5 text-amber-400" />
+              <Sparkles className="h-3.5 w-3.5 text-primary/70" />
               <span>Cashier: <strong className="text-slate-200">{user?.full_name || user?.email || 'Operator'}</strong></span>
             </div>
 
@@ -677,7 +677,7 @@ export default function Checkout() {
               type="button"
               disabled={loading || billItems.length === 0}
               onClick={handleCompleteSale}
-              className="w-full py-7 text-base font-black tracking-wide gap-2 bg-gradient-to-r from-blue-600 to-emerald-600 hover:from-blue-500 hover:to-emerald-500 text-white shadow-xl rounded-xl"
+              className="w-full py-7 text-base font-black tracking-wide gap-2 bg-gradient-to-r from-blue-600 to-primary hover:from-blue-500 hover:to-emerald-500 text-white shadow-xl rounded-xl"
             >
               {loading ? (
                 'Processing Sale...'

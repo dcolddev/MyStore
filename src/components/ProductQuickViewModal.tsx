@@ -93,10 +93,10 @@ export const ProductQuickViewModal: React.FC<ProductQuickViewModalProps> = ({
           <div className="p-6 md:p-8 flex flex-col justify-between space-y-6">
             <div className="space-y-4">
               <DialogHeader className="p-0 text-left space-y-1">
-                <div className="flex items-center gap-1.5 text-xs text-amber-500 font-semibold mb-1">
+                <div className="flex items-center gap-1.5 text-xs text-primary font-semibold mb-1">
                   <div className="flex">
                     {[1, 2, 3, 4, 5].map((s) => (
-                      <Star key={s} className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
+                      <Star key={s} className="h-3.5 w-3.5 fill-primary/70 text-primary/70" />
                     ))}
                   </div>
                   <span>4.9 / 5.0 (24 Verified Reviews)</span>
@@ -177,7 +177,7 @@ export const ProductQuickViewModal: React.FC<ProductQuickViewModalProps> = ({
                 </Button>
                 <Button
                   onClick={handleBuyNow}
-                  className="flex-1 py-6 font-bold gap-2 bg-gradient-to-r from-primary to-indigo-600 text-white shadow-md"
+                  className="flex-1 py-6 font-bold gap-2 bg-gradient-to-r from-primary to-primary/60 text-white shadow-md"
                 >
                   <span>Buy Now</span>
                   <ArrowRight className="h-4 w-4" />

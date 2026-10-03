@@ -184,8 +184,8 @@ export default function Index() {
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col font-sans">
       {/* Top Banner Notice */}
-      <div className="bg-gradient-to-r from-amber-500 via-orange-600 to-indigo-600 px-4 py-2 text-center text-xs font-bold text-white flex items-center justify-center gap-2 shadow-sm">
-        <Zap className="h-3.5 w-3.5 text-amber-200 animate-pulse" />
+      <div className="bg-gradient-to-r from-primary via-primary/80 to-primary/60 px-4 py-2 text-center text-xs font-bold text-white flex items-center justify-center gap-2 shadow-sm">
+        <Zap className="h-3.5 w-3.5 text-primary-foreground animate-pulse" />
         <span>Flutterwave Payment Gateway Active • Free Shipping on Orders Over ₦50,000 • Mailgun Email Confirmation Enabled</span>
       </div>
 
@@ -193,11 +193,11 @@ export default function Index() {
       <header className="border-b bg-card/85 backdrop-blur-md sticky top-0 z-40 shadow-sm">
         <div className="container mx-auto flex items-center justify-between p-4 max-w-7xl">
           <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigate('/')}>
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-tr from-amber-500 to-indigo-600 shadow-md">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-tr from-primary to-primary/60 shadow-md">
               <Store className="h-5 w-5 text-white" />
             </div>
             <div>
-              <span className="font-black text-xl tracking-tight bg-gradient-to-r from-amber-500 via-orange-600 to-indigo-600 bg-clip-text text-transparent">
+              <span className="font-black text-xl tracking-tight bg-gradient-to-r from-primary via-primary/80 to-primary/60 bg-clip-text text-transparent">
                 Pocket Shop
               </span>
               <span className="block text-[10px] text-muted-foreground uppercase font-extrabold tracking-wider">
@@ -213,7 +213,7 @@ export default function Index() {
               placeholder="Search products in catalog..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 pr-4 py-5 rounded-full bg-muted/60 border-border/80 focus-visible:ring-amber-500 text-sm font-medium"
+              className="pl-10 pr-4 py-5 rounded-full bg-muted/60 border-border/80 focus-visible:ring-primary text-sm font-medium"
             />
           </div>
 
@@ -227,7 +227,7 @@ export default function Index() {
                   onClick={() => navigate('/account')}
                   className="gap-2 font-semibold border-border/80"
                 >
-                  <User className="h-4 w-4 text-amber-500" />
+                  <User className="h-4 w-4 text-primary" />
                   <span className="hidden sm:inline">My Orders</span>
                 </Button>
 
@@ -236,7 +236,7 @@ export default function Index() {
                     variant="outline"
                     size="sm"
                     onClick={() => navigate('/dashboard')}
-                    className="gap-1.5 font-semibold bg-amber-500/10 text-amber-600 border-amber-500/30"
+                    className="gap-1.5 font-semibold bg-primary/10 text-primary border-primary/30"
                   >
                     <UserCheck className="h-4 w-4" />
                     <span className="hidden sm:inline">Manager POS</span>
@@ -260,14 +260,14 @@ export default function Index() {
                 onClick={() => navigate('/auth')}
                 className="gap-2 font-semibold border-border/80"
               >
-                <User className="h-4 w-4 text-amber-500" />
+                <User className="h-4 w-4 text-primary" />
                 <span>Customer Sign In</span>
               </Button>
             )}
 
             <Button
               onClick={() => setIsCartOpen(true)}
-              className="relative gap-2 px-4 py-5 shadow-lg bg-gradient-to-r from-amber-500 to-indigo-600 text-white font-bold"
+              className="relative gap-2 px-4 py-5 shadow-lg bg-gradient-to-r from-primary to-primary/60 text-white font-bold"
             >
               <ShoppingBag className="h-4 w-4" />
               <span className="hidden sm:inline font-extrabold">Cart</span>
@@ -293,14 +293,14 @@ export default function Index() {
       />
 
       {/* Dynamic Hero Section */}
-      <section className="relative overflow-hidden bg-gradient-to-b from-amber-500/10 via-amber-500/5 to-background py-12 md:py-20 border-b">
+      <section className="relative overflow-hidden bg-gradient-to-b from-primary/10 via-primary/5 to-background py-12 md:py-20 border-b">
         <div className="container mx-auto px-4 max-w-7xl relative z-10 text-center">
-          <Badge className="mb-4 bg-amber-500/10 text-amber-600 border-amber-500/20 hover:bg-amber-500/20 px-3.5 py-1 text-xs font-bold uppercase tracking-wider">
-            <Zap className="mr-1.5 h-3.5 w-3.5 text-amber-500" /> Flutterwave Integrated E-Commerce Storefront
+          <Badge className="mb-4 bg-primary/10 text-primary border-primary/20 hover:bg-primary/20 px-3.5 py-1 text-xs font-bold uppercase tracking-wider">
+            <Zap className="mr-1.5 h-3.5 w-3.5 text-primary" /> Flutterwave Integrated E-Commerce Storefront
           </Badge>
 
           <h1 className="text-4xl md:text-6xl font-black tracking-tight mb-4 max-w-4xl mx-auto leading-tight">
-            Shop Premium Products & Enjoy Instant <span className="bg-gradient-to-r from-amber-500 via-orange-600 to-indigo-600 bg-clip-text text-transparent">Flutterwave Checkout</span>
+            Shop Premium Products & Enjoy Instant <span className="bg-gradient-to-r from-primary via-primary/80 to-primary/60 bg-clip-text text-transparent">Flutterwave Checkout</span>
           </h1>
 
           <p className="text-base md:text-xl text-muted-foreground mb-8 max-w-2xl mx-auto font-normal">
@@ -309,7 +309,7 @@ export default function Index() {
 
           <div className="flex flex-wrap items-center justify-center gap-6 text-xs md:text-sm font-extrabold text-muted-foreground">
             <div className="flex items-center gap-2 bg-card/60 px-4 py-2 rounded-full border shadow-sm">
-              <CreditCard className="h-4 w-4 text-amber-500" />
+              <CreditCard className="h-4 w-4 text-primary" />
               <span>Flutterwave Secured Payments</span>
             </div>
             <div className="flex items-center gap-2 bg-card/60 px-4 py-2 rounded-full border shadow-sm">
@@ -321,7 +321,7 @@ export default function Index() {
               <span>100% Guaranteed Authentic</span>
             </div>
             <div className="flex items-center gap-2 bg-card/60 px-4 py-2 rounded-full border shadow-sm">
-              <Star className="h-4 w-4 text-amber-500 fill-amber-500" />
+              <Star className="h-4 w-4 text-primary fill-primary" />
               <span>4.9 / 5.0 Rating</span>
             </div>
           </div>
@@ -427,7 +427,7 @@ export default function Index() {
                         className="h-full w-auto max-h-[170px] object-contain group-hover:scale-105 transition-transform duration-500 drop-shadow-md"
                       />
                     ) : (
-                      <div className="h-24 w-24 rounded-2xl bg-amber-500/10 flex items-center justify-center font-extrabold text-amber-600 text-xl">
+                      <div className="h-24 w-24 rounded-2xl bg-primary/10 flex items-center justify-center font-extrabold text-primary text-xl">
                         {product.name.slice(0, 2).toUpperCase()}
                       </div>
                     )}
@@ -457,21 +457,21 @@ export default function Index() {
 
                   {/* Body Content */}
                   <CardContent className="p-5 space-y-2">
-                    <h3 className="font-extrabold text-base line-clamp-1 group-hover:text-amber-500 transition-colors">
+                    <h3 className="font-extrabold text-base line-clamp-1 group-hover:text-primary transition-colors">
                       {product.name}
                     </h3>
 
-                    <div className="flex items-center gap-1 text-xs text-amber-500 font-medium">
-                      <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
-                      <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
-                      <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
-                      <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
-                      <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
+                    <div className="flex items-center gap-1 text-xs text-primary font-medium">
+                      <Star className="h-3.5 w-3.5 fill-primary/70 text-primary/70" />
+                      <Star className="h-3.5 w-3.5 fill-primary/70 text-primary/70" />
+                      <Star className="h-3.5 w-3.5 fill-primary/70 text-primary/70" />
+                      <Star className="h-3.5 w-3.5 fill-primary/70 text-primary/70" />
+                      <Star className="h-3.5 w-3.5 fill-primary/70 text-primary/70" />
                       <span className="text-muted-foreground ml-1 text-[11px] font-semibold">(4.9)</span>
                     </div>
 
                     <div className="pt-2 flex items-baseline justify-between">
-                      <span className="text-2xl font-black text-amber-600">
+                      <span className="text-2xl font-black text-primary">
                         ₦{product.selling_price.toFixed(2)}
                       </span>
                     </div>
@@ -482,7 +482,7 @@ export default function Index() {
                 <div className="p-5 pt-0">
                   <Button
                     onClick={(e) => handleAddToCart(product, e)}
-                    className="w-full gap-2 font-bold shadow-md bg-gradient-to-r from-amber-500 to-indigo-600 text-white"
+                    className="w-full gap-2 font-bold shadow-md bg-gradient-to-r from-primary to-primary/60 text-white"
                   >
                     <ShoppingBag className="h-4 w-4" />
                     <span>Add to Cart</span>
@@ -498,7 +498,7 @@ export default function Index() {
       <footer className="border-t bg-card py-12 mt-16">
         <div className="container mx-auto px-4 max-w-7xl flex flex-col md:flex-row items-center justify-between gap-6 text-xs text-muted-foreground">
           <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-500 text-white font-black text-sm">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary text-white font-black text-sm">
               PS
             </div>
             <div>
@@ -509,10 +509,10 @@ export default function Index() {
 
           <div className="flex flex-wrap items-center gap-6 font-semibold">
             <Button variant="link" size="sm" onClick={() => navigate('/account')}>
-              <PackageCheck className="h-4 w-4 mr-1 text-amber-500" /> My Orders & Profile
+              <PackageCheck className="h-4 w-4 mr-1 text-primary" /> My Orders & Profile
             </Button>
             <Button variant="link" size="sm" onClick={() => navigate('/dashboard')}>
-              <Store className="h-4 w-4 mr-1 text-amber-500" /> Manager / POS Portal
+              <Store className="h-4 w-4 mr-1 text-primary" /> Manager / POS Portal
             </Button>
             <Button variant="link" size="sm" onClick={() => setIsCartOpen(true)}>
               Cart ({itemCount})
